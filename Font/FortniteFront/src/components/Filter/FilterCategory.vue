@@ -6,30 +6,35 @@
     </div>
 
     <transition name="slide-fade">
-      <ul v-if="isOpen" class="filter-list">
-        <li 
-          v-for="item in categories" 
-          :key="item.value" 
-          class="filter-item"
-          @click="toggleItem(item.value)"
-        >
-          <div class="left-content">
-            <div 
-              class="checkbox" 
-              :class="{ 'is-active': selectedValue === item.value }"
-            >
+      <div v-if="isOpen">
+        <div v-if="loading" class="loading-message">Carregando...</div>
+        <ul v-else-if="categories.length > 0" class="filter-list">
+          <li 
+            v-for="item in categories" 
+            :key="item.value" 
+            class="filter-item"
+            @click="toggleItem(item.value)"
+          >
+            <div class="left-content">
+              <div 
+                class="checkbox" 
+                :class="{ 'is-active': selectedValue === item.value }"
+              >
+              </div>
+              <span class="label">{{ item.label }}</span>
             </div>
-            <span class="label">{{ item.label }}</span>
-          </div>
-          <span class="count">{{ item.count }}</span>
-        </li>
-      </ul>
+            <span class="count">{{ item.count }}</span>
+          </li>
+        </ul>
+        <div v-else class="empty-message">Nenhuma categoria encontrada</div>
+      </div>
     </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { useCosmetics } from '@/composables/useCosmetics';
 
 const props = defineProps({
   modelValue: {
@@ -40,18 +45,48 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
-const isOpen = ref(false); // Alterado de true para false
+const isOpen = ref(false);
 const selectedValue = ref(props.modelValue || '');
+const categories = ref([]);
+const loading = ref(false);
 
-// Tipos de cosméticos (ajustar conforme API)
-const categories = ref([
-  { value: 'Outfit', label: 'Outfit', count: 0 },
-  { value: 'Backpack', label: 'Backpack', count: 0 },
-  { value: 'Emote', label: 'Emote', count: 0 },
-  { value: 'Harvesting Tool', label: 'Harvesting Tool', count: 0 },
-  { value: 'Glider', label: 'Glider', count: 0 },
-  { value: 'Wrap', label: 'Wrap', count: 0 },
-]);
+const { filters, getFilterOptions } = useCosmetics();
+
+const loadFilterOptions = async () => {
+  try {
+    loading.value = true;
+    
+    console.log('Buscando opções de categoria com filtros do frontend');
+    const options = await getFilterOptions();
+    console.log('Opções recebidas:', options);
+    
+    if (options && options.types && Array.isArray(options.types)) {
+      // Garantir que todas as categorias sejam exibidas, mesmo com count 0
+      categories.value = options.types
+        .map(t => ({
+          value: t.value,
+          label: t.label || t.value,
+          count: t.count !== undefined && t.count !== null ? t.count : 0
+        }))
+        .sort((a, b) => {
+          // Ordenar por nome, mas manter ordem alfabética
+          return a.label.localeCompare(b.label);
+        });
+      console.log('Categorias processadas:', categories.value);
+    } else {
+      console.warn('Nenhuma categoria encontrada ou formato inválido:', options);
+      // Se não houver opções, manter lista vazia
+      categories.value = [];
+    }
+  } catch (error) {
+    console.error('Erro ao carregar opções de categoria:', error);
+    console.error('Detalhes do erro:', error.response?.data || error.message);
+    // Manter lista vazia em caso de erro - será recarregado quando os filtros mudarem
+    categories.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
 
 const toggleItem = (value) => {
   if (selectedValue.value === value) {
@@ -64,6 +99,27 @@ const toggleItem = (value) => {
 
 watch(() => props.modelValue, (newVal) => {
   selectedValue.value = newVal || '';
+});
+
+// Recarregar opções quando os filtros mudarem (exceto type)
+watch([
+  () => filters.name,
+  () => filters.rarity,
+  () => filters.startDate,
+  () => filters.endDate,
+  () => filters.onlyNew,
+  () => filters.onlyInShop,
+  () => filters.onlyOnSale,
+  () => filters.onlyOwned,
+  () => filters.onlyBundle,
+  () => filters.minPrice,
+  () => filters.maxPrice,
+], () => {
+  loadFilterOptions();
+}, { deep: true });
+
+onMounted(() => {
+  loadFilterOptions();
 });
 </script>
 
@@ -158,5 +214,13 @@ watch(() => props.modelValue, (newVal) => {
 
 .checkbox.is-active + .label {
   color: white;
+}
+
+.loading-message,
+.empty-message {
+  padding: 12px;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
 }
 </style>

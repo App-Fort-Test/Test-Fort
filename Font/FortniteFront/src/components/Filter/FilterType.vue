@@ -6,30 +6,35 @@
     </div>
 
     <transition name="slide-fade">
-      <ul v-if="isOpen" class="filter-list">
-        <li 
-          v-for="item in rarities" 
-          :key="item.value" 
-          class="filter-item"
-          @click="toggleItem(item.value)"
-        >
-          <div class="left-content">
-            <div 
-              class="checkbox" 
-              :class="{ 'is-active': selectedValue === item.value }"
-            >
+      <div v-if="isOpen">
+        <div v-if="loading" class="loading-message">Carregando...</div>
+        <ul v-else-if="rarities.length > 0" class="filter-list">
+          <li 
+            v-for="item in rarities" 
+            :key="item.value" 
+            class="filter-item"
+            @click="toggleItem(item.value)"
+          >
+            <div class="left-content">
+              <div 
+                class="checkbox" 
+                :class="{ 'is-active': selectedValue === item.value }"
+              >
+              </div>
+              <span class="label">{{ item.label }}</span>
             </div>
-            <span class="label">{{ item.label }}</span>
-          </div>
-          <span class="count">{{ item.count }}</span>
-        </li>
-      </ul>
+            <span class="count">{{ item.count }}</span>
+          </li>
+        </ul>
+        <div v-else class="empty-message">Nenhuma raridade encontrada</div>
+      </div>
     </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
+import { useCosmetics } from '@/composables/useCosmetics';
 
 const props = defineProps({
   modelValue: {
@@ -42,16 +47,46 @@ const emit = defineEmits(['update:modelValue']);
 
 const isOpen = ref(false);
 const selectedValue = ref(props.modelValue || '');
+const rarities = ref([]);
+const loading = ref(false);
 
-// Raridades (ajustar conforme API)
-const rarities = ref([
-  { value: 'common', label: 'Comum', count: 0 },
-  { value: 'uncommon', label: 'Incomum', count: 0 },
-  { value: 'rare', label: 'Raro', count: 0 },
-  { value: 'epic', label: 'Épico', count: 0 },
-  { value: 'legendary', label: 'Lendário', count: 0 },
-  { value: 'mythic', label: 'Mítico', count: 0 },
-]);
+const { filters, getFilterOptions } = useCosmetics();
+
+const loadFilterOptions = async () => {
+  try {
+    loading.value = true;
+    
+    console.log('Buscando opções de raridade com filtros do frontend');
+    const options = await getFilterOptions();
+    console.log('Opções recebidas:', options);
+    
+    if (options && options.rarities && Array.isArray(options.rarities)) {
+      // Garantir que todas as raridades sejam exibidas, mesmo com count 0
+      rarities.value = options.rarities
+        .map(r => ({
+          value: r.value, // Manter o valor original
+          label: r.label || r.value,
+          count: r.count !== undefined && r.count !== null ? r.count : 0
+        }))
+        .sort((a, b) => {
+          // Ordenar por nome, mas manter ordem alfabética
+          return a.label.localeCompare(b.label);
+        });
+      console.log('Raridades processadas:', rarities.value);
+    } else {
+      console.warn('Nenhuma raridade encontrada ou formato inválido:', options);
+      // Se não houver opções, manter lista vazia
+      rarities.value = [];
+    }
+  } catch (error) {
+    console.error('Erro ao carregar opções de raridade:', error);
+    console.error('Detalhes do erro:', error.response?.data || error.message);
+    // Manter lista vazia em caso de erro - será recarregado quando os filtros mudarem
+    rarities.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
 
 const toggleItem = (value) => {
   if (selectedValue.value === value) {
@@ -64,6 +99,27 @@ const toggleItem = (value) => {
 
 watch(() => props.modelValue, (newVal) => {
   selectedValue.value = newVal || '';
+});
+
+// Recarregar opções quando os filtros mudarem (exceto rarity)
+watch([
+  () => filters.name,
+  () => filters.type,
+  () => filters.startDate,
+  () => filters.endDate,
+  () => filters.onlyNew,
+  () => filters.onlyInShop,
+  () => filters.onlyOnSale,
+  () => filters.onlyOwned,
+  () => filters.onlyBundle,
+  () => filters.minPrice,
+  () => filters.maxPrice,
+], () => {
+  loadFilterOptions();
+}, { deep: true });
+
+onMounted(() => {
+  loadFilterOptions();
 });
 </script>
 
@@ -158,5 +214,13 @@ watch(() => props.modelValue, (newVal) => {
 
 .checkbox.is-active + .label {
   color: white;
+}
+
+.loading-message,
+.empty-message {
+  padding: 12px;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
 }
 </style>

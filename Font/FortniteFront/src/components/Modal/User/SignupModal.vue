@@ -3,6 +3,11 @@
     <h2 class="form-title">CRIE SUA CONTA PARA COMPRAR OS COSMETICOS</h2>
     
     <div class="input-group">
+      <label for="username">Nome de Usuário</label>
+      <input type="text" id="username" placeholder="Insira seu nome de usuário" v-model="formData.username" />
+    </div>
+
+    <div class="input-group">
       <label for="email">E-mail</label>
       <input type="email" id="email" placeholder="Insira seu e-mail" v-model="formData.email" />
     </div>
@@ -35,6 +40,7 @@ const emit = defineEmits(['signup-success', 'close']);
 const { register } = useAuth();
 
 const formData = reactive({
+  username: '',
   email: '',
   password: ''
 });
@@ -45,8 +51,13 @@ const isLoading = ref(false);
 
 const handleSignup = async () => {
   // Validações
-  if (!formData.email || !formData.password) {
+  if (!formData.username || !formData.email || !formData.password) {
     errorMessage.value = 'Por favor, preencha todos os campos';
+    return;
+  }
+
+  if (formData.username.length < 3) {
+    errorMessage.value = 'O nome de usuário deve ter pelo menos 3 caracteres';
     return;
   }
 
@@ -60,13 +71,14 @@ const handleSignup = async () => {
   successMessage.value = '';
 
   try {
-    const result = await register(formData.email, formData.password, formData.email.split('@')[0]);
+    const result = await register(formData.email, formData.password, formData.username);
     
     if (result.success) {
       successMessage.value = `Conta criada com sucesso! Você recebeu ${result.data.vbucks} v-bucks.`;
       emit('signup-success', result.data);
       // Limpar formulário após 2 segundos e fechar modal
       setTimeout(() => {
+        formData.username = '';
         formData.email = '';
         formData.password = '';
         emit('close');

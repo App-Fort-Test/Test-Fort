@@ -278,6 +278,34 @@ export const cosmeticsAPI = {
     }
   },
 
+  // Buscar opções de filtros com contagens
+  getFilterOptions: async (filters = {}) => {
+    try {
+      const params = {};
+      if (filters.name) params.name = filters.name;
+      if (filters.type) params.type = filters.type;
+      if (filters.rarity) params.rarity = filters.rarity;
+      if (filters.startDate) params.dateFrom = filters.startDate;
+      if (filters.endDate) params.dateTo = filters.endDate;
+      if (filters.onlyNew) params.onlyNew = filters.onlyNew;
+      if (filters.onlyInShop) params.onlyInShop = filters.onlyInShop;
+      if (filters.onlyOnSale) params.onlyOnSale = filters.onlyOnSale;
+      if (filters.onlyOwned) params.onlyOwned = filters.onlyOwned;
+      if (filters.onlyBundle) params.onlyBundle = filters.onlyBundle;
+      if (filters.minPrice !== null && filters.minPrice !== undefined) params.minPrice = filters.minPrice;
+      if (filters.maxPrice !== null && filters.maxPrice !== undefined) params.maxPrice = filters.maxPrice;
+
+      console.log('Chamando API /filter-options com params:', params);
+      const response = await api.get('/filter-options', { params });
+      console.log('Resposta da API /filter-options:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar opções de filtros:', error);
+      console.error('Detalhes do erro:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
   // Devolver cosmético
   refundCosmetic: async (cosmeticId, cosmeticName, userId) => {
     try {

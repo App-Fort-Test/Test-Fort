@@ -9,7 +9,10 @@
     >
         <div class="card-header">
             <div class="date-tag" :style="{ backgroundImage: `url(${fundoImage})` }">{{ formattedDate }}</div>
-            <div class="rarity-tag">{{ rarityLabel }}</div>
+            <div 
+                class="rarity-tag" 
+                :title="rarityLabelFull.length > 8 ? rarityLabelFull : ''"
+            >{{ rarityLabelDisplay }}</div>
         </div>
 
         <div class="image-container">
@@ -23,11 +26,32 @@
             >
 
             <div class="overlay-tags">
-                <div class="price-badge">{{ typeDisplay }}</div>
-                <div v-if="cosmetic?.isNew" class="discont-badge new-badge">NOVO</div>
-                <div v-else-if="cosmetic?.isOnSale" class="discont-badge">PROMOÇÃO</div>
-                <div v-if="cosmetic?.isOwned" class="discont-badge owned-badge">ADQUIRIDO</div>
-                <div v-if="cosmetic?.isInShop && !cosmetic?.isOwned" class="discont-badge shop-badge">PROMOÇÃO</div>
+                <div 
+                    class="price-badge" 
+                    :title="typeDisplayFull.length > 12 ? typeDisplayFull : ''"
+                >{{ typeDisplay }}</div>
+                <!-- Badges empilhados no canto inferior direito -->
+                <div 
+                    v-if="cosmetic?.isOnSale" 
+                    class="discont-badge bottom-badge status-badge"
+                    :style="{ bottom: getStatusBadgePosition('promo') + 'px' }"
+                >PROMOÇÃO</div>
+                <div 
+                    v-if="cosmetic?.isInShop && !cosmetic?.isOwned && !cosmetic?.isOnSale" 
+                    class="discont-badge shop-badge bottom-badge status-badge"
+                    :style="{ bottom: getStatusBadgePosition('shop') + 'px' }"
+                >PROMOÇÃO</div>
+                <div 
+                    v-if="cosmetic?.isNew" 
+                    class="discont-badge new-badge bottom-badge status-badge"
+                    :style="{ bottom: getStatusBadgePosition('new') + 'px' }"
+                >NOVO</div>
+                <div 
+                    v-if="cosmetic?.isBundle" 
+                    class="discont-badge bundle-badge bottom-badge status-badge"
+                    :style="{ bottom: getStatusBadgePosition('bundle') + 'px' }"
+                >BUNDLE</div>
+                <div v-if="cosmetic?.isOwned" class="discont-badge owned-badge bottom-badge">ADQUIRIDO</div>
             </div>
         </div>
 
@@ -112,7 +136,6 @@ import fundoRaro from '../../../assets/svg/fundoraro.svg';
 import fundoEpico from '../../../assets/svg/fundoepico.svg';
 import fundoLegendario from '../../../assets/svg/fundolegendario.svg';
 import fundoMystico from '../../../assets/svg/fundomystico.svg';
-import amostraCard from '../../../assets/png/amostracard.png';
 
 const { user } = useAuth();
 
@@ -275,7 +298,7 @@ const normalizedRarity = computed(() => {
         .trim();
 });
 
-const rarityLabel = computed(() => {
+const rarityLabelFull = computed(() => {
     const config = getRarityConfig(normalizedRarity.value);
     if (config && config.label) return config.label;
     
@@ -293,6 +316,15 @@ const rarityLabel = computed(() => {
     return formatted.toUpperCase() || 'COMMON';
 });
 
+// Raridade truncada se tiver mais de 8 caracteres
+const rarityLabelDisplay = computed(() => {
+    const fullRarity = rarityLabelFull.value;
+    if (fullRarity.length > 8) {
+        return fullRarity.substring(0, 8) + '...';
+    }
+    return fullRarity;
+});
+
 const fundoImage = computed(() => {
     const config = getRarityConfig(normalizedRarity.value);
     return config?.fundo || fundoComum;
@@ -306,10 +338,12 @@ const rarityColors = computed(() => {
 
 // Imagem - usa da API se disponível
 const imageSrc = computed(() => {
-    if (props.cosmetic?.images?.smallIcon) {
-        return props.cosmetic.images.smallIcon;
-    }
-    return amostraCard;
+    if (!props.cosmetic?.images) return '/placeholder.png';
+    // Tentar diferentes campos de imagem
+    return props.cosmetic.images.smallIcon || 
+           props.cosmetic.images.icon || 
+           props.cosmetic.images.featured || 
+           '/placeholder.png';
 });
 
 // Data formatada
@@ -330,22 +364,20 @@ const itemNameFull = computed(() => {
     return props.cosmetic?.name || 'Item Name';
 });
 
-// Nome do item truncado (máximo 20 caracteres)
+// Nome do item - o CSS vai truncar automaticamente
 const itemName = computed(() => {
-    const name = itemNameFull.value;
-    if (name.length > 20) {
-        return name.substring(0, 20) + '...';
-    }
-    return name;
+    return itemNameFull.value;
 });
 
-// Verificar se precisa mostrar tooltip
+// Verificar se precisa mostrar tooltip (se o nome foi truncado pelo CSS)
 const showTooltip = computed(() => {
-    return itemNameFull.value.length > 20;
+    // O tooltip será mostrado se o nome for longo o suficiente para ser truncado
+    // O CSS com text-overflow: ellipsis vai fazer o truncamento visual
+    return itemNameFull.value.length > 0;
 });
 
 // Tipo do item - usar displayValue se disponível, senão value
-const typeDisplay = computed(() => {
+const typeDisplayFull = computed(() => {
     if (props.cosmetic?.type) {
         if (typeof props.cosmetic.type === 'object') {
             // Se displayValue não for "null", usar ele, senão usar value
@@ -357,6 +389,15 @@ const typeDisplay = computed(() => {
         return String(props.cosmetic.type).toUpperCase();
     }
     return 'OUTFIT';
+});
+
+// Tipo truncado se tiver mais de 12 caracteres
+const typeDisplay = computed(() => {
+    const fullType = typeDisplayFull.value;
+    if (fullType.length > 12) {
+        return fullType.substring(0, 12) + '...';
+    }
+    return fullType;
 });
 
 // Preço
@@ -377,6 +418,26 @@ const hasDiscount = computed(() => {
     }
     return props.hasDiscount;
 });
+
+// Função para calcular a posição do badge de status (empilhamento de baixo para cima)
+const getStatusBadgePosition = (badgeType) => {
+    const statusBadges = [];
+    
+    // Coletar todos os badges de status que estão visíveis, na ordem de empilhamento
+    if (props.cosmetic?.isOnSale) statusBadges.push('promo');
+    if (props.cosmetic?.isInShop && !props.cosmetic?.isOwned && !props.cosmetic?.isOnSale) statusBadges.push('shop');
+    if (props.cosmetic?.isNew) statusBadges.push('new');
+    if (props.cosmetic?.isBundle) statusBadges.push('bundle');
+    
+    // Encontrar o índice do badge atual na lista
+    const index = statusBadges.indexOf(badgeType);
+    
+    if (index === -1) return 8; // Se não encontrado, retorna posição padrão
+    
+    // Calcular posição: 8px (base) + (índice * (32px altura + 8px gap))
+    // O primeiro badge (index 0) fica em 8px, o segundo em 48px, etc.
+    return 8 + (index * 40); // 32px (altura) + 8px (gap) = 40px
+};
 
 // Pode comprar?
 const canPurchase = computed(() => {
@@ -415,7 +476,7 @@ const handleShowDetails = () => {
 };
 
 const handleImageError = (event) => {
-    event.target.src = amostraCard;
+    event.target.src = '/placeholder.png';
 };
 </script>
 
@@ -469,7 +530,7 @@ const handleImageError = (event) => {
 .date-tag {
     background-size: cover;
     width: 95px;
-    height: 36px;
+    height: 40px;
     justify-content: start;
     align-items: center;
     display: flex;
@@ -482,6 +543,11 @@ const handleImageError = (event) => {
     display: flex;
     border-radius: 10px;
     border: 1px solid #00458A;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    cursor: help;
     background: #00458A;
     box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
     justify-content: center;
@@ -519,7 +585,7 @@ const handleImageError = (event) => {
     bottom: 8px;
     left: 8px;
     width: 80px;
-    height: 32px;
+    height: 36px;
     border-radius: 16px;
     border: 2px solid #312E81;
     background: linear-gradient(162deg, #161A42 22.61%, #161A42 118.29%);
@@ -536,18 +602,18 @@ const handleImageError = (event) => {
     overflow: hidden;
     text-overflow: ellipsis;
     padding: 0 6px;
+    max-width: 80px;
+    cursor: help;
 }
 
 .discont-badge {
     background: #DA22FF;
     border-radius: 16px;
     position: absolute;
-    bottom: 8px;
-    left: 8px;
+    right: 8px;
     width: 80px;
     height: 32px;
     display: flex;
-    margin-left: 120px;
     justify-content: center;
     align-items: center;
     border-radius: 16px;
@@ -557,6 +623,10 @@ const handleImageError = (event) => {
     color: #fff;
     font-size: 12px;
     font-weight: 600;
+}
+
+.discont-badge.bottom-badge {
+    bottom: 8px;
 }
 
 .discont-badge.new-badge {
@@ -606,13 +676,15 @@ const handleImageError = (event) => {
     margin-top: 12px;
     color: #FAFAFB;
     font-family: Poppins;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
     cursor: default;
     position: relative;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    max-width: 100%;
+    line-height: 1.3;
 }
 
 .item-name.has-tooltip {

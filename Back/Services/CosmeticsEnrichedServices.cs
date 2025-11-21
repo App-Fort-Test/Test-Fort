@@ -511,6 +511,135 @@ namespace Backend.Services
             var shop = await _shopServices.GetShopAsync();
             return shop;
         }
+
+        public async Task<object> GetFilterOptionsAsync(
+            string name = "",
+            string type = "",
+            string rarity = "",
+            DateTime? dateFrom = null,
+            DateTime? dateTo = null,
+            bool? onlyNew = null,
+            bool? onlyInShop = null,
+            bool? onlyOnSale = null,
+            bool? onlyOwned = null,
+            bool? onlyBundle = null,
+            int? minPrice = null,
+            int? maxPrice = null,
+            int? userId = null)
+        {
+            // Buscar todos os cosméticos enriquecidos
+            var allCosmetics = await GetAllCosmeticsAsync(userId);
+            
+            // Primeiro, obter TODAS as categorias e raridades únicas de TODOS os cosméticos
+            // Normalizar para garantir que tipos/raridades com mesmo nome (case-insensitive) sejam agrupados
+            var allTypes = allCosmetics
+                .Where(c => c.Type != null && !string.IsNullOrWhiteSpace(c.Type.Value))
+                .GroupBy(c => c.Type.Value, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new { 
+                    value = g.Key, // Usar a primeira ocorrência como valor canônico
+                    label = g.First().Type.DisplayValue ?? g.Key 
+                })
+                .OrderBy(x => x.value)
+                .ToList();
+            
+            var allRarities = allCosmetics
+                .Where(c => c.Rarity != null && !string.IsNullOrWhiteSpace(c.Rarity.Value))
+                .GroupBy(c => c.Rarity.Value, StringComparer.OrdinalIgnoreCase)
+                .Select(g => new { 
+                    value = g.Key, // Usar a primeira ocorrência como valor canônico
+                    label = g.First().Rarity.DisplayValue ?? g.Key 
+                })
+                .OrderBy(x => x.value)
+                .ToList();
+            
+            // Aplicar filtros (exceto type e rarity que queremos contar)
+            var query = allCosmetics.AsQueryable();
+            
+            if (!string.IsNullOrWhiteSpace(name))
+            {
+                query = query.Where(c => c.Name.Contains(name, StringComparison.OrdinalIgnoreCase));
+            }
+            
+            if (dateFrom.HasValue)
+            {
+                query = query.Where(c => c.Added >= dateFrom.Value);
+            }
+            if (dateTo.HasValue)
+            {
+                query = query.Where(c => c.Added <= dateTo.Value);
+            }
+            
+            if (onlyNew == true)
+            {
+                query = query.Where(c => c.IsNew);
+            }
+            
+            if (onlyInShop == true)
+            {
+                query = query.Where(c => c.IsInShop);
+            }
+            
+            if (onlyOnSale == true)
+            {
+                query = query.Where(c => c.IsOnSale);
+            }
+            
+            if (onlyOwned == true)
+            {
+                query = query.Where(c => c.IsOwned);
+            }
+            
+            if (onlyBundle == true)
+            {
+                query = query.Where(c => c.IsBundle);
+            }
+            
+            if (minPrice.HasValue)
+            {
+                query = query.Where(c => c.Price.HasValue && c.Price >= minPrice.Value);
+            }
+            
+            if (maxPrice.HasValue)
+            {
+                query = query.Where(c => c.Price.HasValue && c.Price <= maxPrice.Value);
+            }
+            
+            var filteredCosmetics = query.ToList();
+            
+            // Contar tipos nos cosméticos filtrados (usando comparação case-insensitive)
+            var typeCountsDict = filteredCosmetics
+                .Where(c => c.Type != null && !string.IsNullOrWhiteSpace(c.Type.Value))
+                .GroupBy(c => c.Type.Value, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key.ToLowerInvariant(), g => g.Count(), StringComparer.OrdinalIgnoreCase);
+            
+            // Criar lista de tipos com contagens (incluindo os que têm count 0)
+            var typeCounts = allTypes.Select(t => new 
+            { 
+                value = t.value, 
+                label = t.label, 
+                count = typeCountsDict.ContainsKey(t.value.ToLowerInvariant()) ? typeCountsDict[t.value.ToLowerInvariant()] : 0 
+            }).ToList();
+            
+            // Contar raridades nos cosméticos filtrados (usando comparação case-insensitive)
+            var rarityCountsDict = filteredCosmetics
+                .Where(c => c.Rarity != null && !string.IsNullOrWhiteSpace(c.Rarity.Value))
+                .GroupBy(c => c.Rarity.Value, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key.ToLowerInvariant(), g => g.Count(), StringComparer.OrdinalIgnoreCase);
+            
+            // Criar lista de raridades com contagens (incluindo as que têm count 0)
+            var rarityCounts = allRarities.Select(r => new 
+            { 
+                value = r.value, 
+                label = r.label, 
+                count = rarityCountsDict.ContainsKey(r.value.ToLowerInvariant()) ? rarityCountsDict[r.value.ToLowerInvariant()] : 0 
+            }).ToList();
+            
+            return new
+            {
+                types = typeCounts,
+                rarities = rarityCounts
+            };
+        }
     }
 
     public class EnrichedCosmetic

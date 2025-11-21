@@ -962,6 +962,254 @@ export function useCosmetics() {
     searchCosmetics(true);
   };
 
+  // Função para obter opções de filtros baseado nos cosméticos carregados
+  const getFilterOptions = async () => {
+    try {
+      // Buscar todos os cosméticos da API externa (com cache)
+      const cosmeticsResponse = await fortniteExternalAPI.getCosmetics().catch(() => null);
+      
+      if (!cosmeticsResponse || !cosmeticsResponse.data || !cosmeticsResponse.data.br) {
+        console.warn('Não foi possível buscar cosméticos para opções de filtros');
+        return { types: [], rarities: [] };
+      }
+      
+      let allCosmetics = cosmeticsResponse.data.br || [];
+      
+      // Aplicar filtros (exceto type e rarity que queremos contar)
+      if (filters.name) {
+        const nameLower = filters.name.toLowerCase();
+        allCosmetics = allCosmetics.filter(c => 
+          c.name && c.name.toLowerCase().includes(nameLower)
+        );
+      }
+      
+      if (filters.startDate) {
+        const startDate = new Date(filters.startDate);
+        allCosmetics = allCosmetics.filter(c => {
+          if (!c.added) return false;
+          const addedDate = new Date(c.added);
+          return addedDate >= startDate;
+        });
+      }
+      
+      if (filters.endDate) {
+        const endDate = new Date(filters.endDate);
+        allCosmetics = allCosmetics.filter(c => {
+          if (!c.added) return false;
+          const addedDate = new Date(c.added);
+          return addedDate <= endDate;
+        });
+      }
+      
+      // Obter TODAS as categorias e raridades únicas de TODOS os cosméticos
+      const allTypesMap = new Map();
+      const allRaritiesMap = new Map();
+      
+      allCosmetics.forEach(c => {
+        // Processar tipos
+        if (c.type && c.type.value) {
+          const typeKey = c.type.value.toLowerCase();
+          if (!allTypesMap.has(typeKey)) {
+            allTypesMap.set(typeKey, {
+              value: c.type.value,
+              label: c.type.displayValue || c.type.value
+            });
+          }
+        }
+        
+        // Processar raridades
+        if (c.rarity && c.rarity.value) {
+          const rarityKey = c.rarity.value.toLowerCase();
+          if (!allRaritiesMap.has(rarityKey)) {
+            allRaritiesMap.set(rarityKey, {
+              value: c.rarity.value,
+              label: c.rarity.displayValue || c.rarity.value
+            });
+          }
+        }
+      });
+      
+      const allTypes = Array.from(allTypesMap.values()).sort((a, b) => a.value.localeCompare(b.value));
+      const allRarities = Array.from(allRaritiesMap.values()).sort((a, b) => a.value.localeCompare(b.value));
+      
+      // Aplicar filtros adicionais para contar
+      let filteredCosmetics = [...allCosmetics];
+      
+      if (filters.onlyNew) {
+        // Buscar novos cosméticos
+        const newCosmeticsResponse = await fortniteExternalAPI.getNewCosmetics().catch(() => null);
+        if (newCosmeticsResponse && newCosmeticsResponse.data && newCosmeticsResponse.data.items && newCosmeticsResponse.data.items.br) {
+          const newCosmeticIds = new Set(newCosmeticsResponse.data.items.br.map(c => c.id));
+          filteredCosmetics = filteredCosmetics.filter(c => newCosmeticIds.has(c.id));
+        } else {
+          filteredCosmetics = [];
+        }
+      }
+      
+      if (filters.onlyInShop || filters.onlyOnSale) {
+        // Buscar shop
+        const shopResponse = await fortniteExternalAPI.getShop().catch(() => null);
+        if (shopResponse && shopResponse.data && shopResponse.data.entries) {
+          const shopCosmeticIds = new Set();
+          shopResponse.data.entries.forEach(entry => {
+            if (entry.brItems && entry.brItems.length > 0) {
+              entry.brItems.forEach(item => {
+                if (item.id) shopCosmeticIds.add(item.id);
+              });
+            }
+          });
+          
+          if (filters.onlyInShop) {
+            filteredCosmetics = filteredCosmetics.filter(c => shopCosmeticIds.has(c.id));
+          }
+          
+          if (filters.onlyOnSale) {
+            // Verificar se está em promoção (preço final < preço regular)
+            const shopCosmeticsMap = new Map();
+            shopResponse.data.entries.forEach(entry => {
+              if (entry.brItems && entry.brItems.length > 0) {
+                entry.brItems.forEach(item => {
+                  if (item.id) {
+                    shopCosmeticsMap.set(item.id, {
+                      finalPrice: entry.finalPrice,
+                      regularPrice: entry.regularPrice
+                    });
+                  }
+                });
+              }
+            });
+            
+            filteredCosmetics = filteredCosmetics.filter(c => {
+              const shopData = shopCosmeticsMap.get(c.id);
+              return shopData && shopData.finalPrice < shopData.regularPrice;
+            });
+          }
+        } else {
+          if (filters.onlyInShop || filters.onlyOnSale) {
+            filteredCosmetics = [];
+          }
+        }
+      }
+      
+      if (filters.onlyOwned && user.value?.id) {
+        try {
+          const inventory = await cosmeticsAPI.getInventory(user.value.id, false);
+          if (inventory && inventory.ownedCosmetics) {
+            const ownedCosmeticIds = new Set(inventory.ownedCosmetics.map(c => c.cosmeticId || c.id));
+            filteredCosmetics = filteredCosmetics.filter(c => ownedCosmeticIds.has(c.id));
+          } else {
+            filteredCosmetics = [];
+          }
+        } catch (err) {
+          console.warn('Erro ao buscar inventário:', err);
+          filteredCosmetics = [];
+        }
+      }
+      
+      if (filters.onlyBundle) {
+        // Buscar shop para verificar bundles
+        const shopResponse = await fortniteExternalAPI.getShop().catch(() => null);
+        if (shopResponse && shopResponse.data && shopResponse.data.entries) {
+          const bundleCosmeticIds = new Set();
+          shopResponse.data.entries.forEach(entry => {
+            if (entry.brItems && entry.brItems.length > 1) {
+              entry.brItems.forEach(item => {
+                if (item.id) bundleCosmeticIds.add(item.id);
+              });
+            }
+          });
+          filteredCosmetics = filteredCosmetics.filter(c => bundleCosmeticIds.has(c.id));
+        } else {
+          filteredCosmetics = [];
+        }
+      }
+      
+      if (filters.minPrice !== null && filters.minPrice !== undefined) {
+        // Buscar shop para obter preços
+        const shopResponse = await fortniteExternalAPI.getShop().catch(() => null);
+        const shopCosmeticsMap = new Map();
+        if (shopResponse && shopResponse.data && shopResponse.data.entries) {
+          shopResponse.data.entries.forEach(entry => {
+            if (entry.brItems && entry.brItems.length > 0) {
+              entry.brItems.forEach(item => {
+                if (item.id) {
+                  shopCosmeticsMap.set(item.id, entry.finalPrice);
+                }
+              });
+            }
+          });
+        }
+        
+        filteredCosmetics = filteredCosmetics.filter(c => {
+          const price = shopCosmeticsMap.get(c.id) || generateRandomPrice(c.id);
+          return price >= filters.minPrice;
+        });
+      }
+      
+      if (filters.maxPrice !== null && filters.maxPrice !== undefined) {
+        // Buscar shop para obter preços
+        const shopResponse = await fortniteExternalAPI.getShop().catch(() => null);
+        const shopCosmeticsMap = new Map();
+        if (shopResponse && shopResponse.data && shopResponse.data.entries) {
+          shopResponse.data.entries.forEach(entry => {
+            if (entry.brItems && entry.brItems.length > 0) {
+              entry.brItems.forEach(item => {
+                if (item.id) {
+                  shopCosmeticsMap.set(item.id, entry.finalPrice);
+                }
+              });
+            }
+          });
+        }
+        
+        filteredCosmetics = filteredCosmetics.filter(c => {
+          const price = shopCosmeticsMap.get(c.id) || generateRandomPrice(c.id);
+          return price <= filters.maxPrice;
+        });
+      }
+      
+      // Contar tipos nos cosméticos filtrados
+      const typeCountsMap = new Map();
+      filteredCosmetics.forEach(c => {
+        if (c.type && c.type.value) {
+          const typeKey = c.type.value.toLowerCase();
+          typeCountsMap.set(typeKey, (typeCountsMap.get(typeKey) || 0) + 1);
+        }
+      });
+      
+      // Criar lista de tipos com contagens (incluindo os que têm count 0)
+      const typeCounts = allTypes.map(t => ({
+        value: t.value,
+        label: t.label,
+        count: typeCountsMap.get(t.value.toLowerCase()) || 0
+      }));
+      
+      // Contar raridades nos cosméticos filtrados
+      const rarityCountsMap = new Map();
+      filteredCosmetics.forEach(c => {
+        if (c.rarity && c.rarity.value) {
+          const rarityKey = c.rarity.value.toLowerCase();
+          rarityCountsMap.set(rarityKey, (rarityCountsMap.get(rarityKey) || 0) + 1);
+        }
+      });
+      
+      // Criar lista de raridades com contagens (incluindo as que têm count 0)
+      const rarityCounts = allRarities.map(r => ({
+        value: r.value,
+        label: r.label,
+        count: rarityCountsMap.get(r.value.toLowerCase()) || 0
+      }));
+      
+      return {
+        types: typeCounts,
+        rarities: rarityCounts
+      };
+    } catch (error) {
+      console.error('Erro ao obter opções de filtros:', error);
+      return { types: [], rarities: [] };
+    }
+  };
+
   return {
     cosmetics,
     loading,
@@ -986,5 +1234,6 @@ export function useCosmetics() {
     loadNewCosmetics,
     loadShop,
     clearFilters,
+    getFilterOptions,
   };
 }

@@ -196,6 +196,36 @@ namespace Backend.Controllers
                 return StatusCode(500, new { message = "Erro ao buscar shop", error = ex.Message });
             }
         }
+
+        [HttpGet("filter-options")]
+        public async Task<IActionResult> GetFilterOptions(
+            [FromQuery] string name = "",
+            [FromQuery] string type = "",
+            [FromQuery] string rarity = "",
+            [FromQuery] DateTime? dateFrom = null,
+            [FromQuery] DateTime? dateTo = null,
+            [FromQuery] bool? onlyNew = null,
+            [FromQuery] bool? onlyInShop = null,
+            [FromQuery] bool? onlyOnSale = null,
+            [FromQuery] bool? onlyOwned = null,
+            [FromQuery] bool? onlyBundle = null,
+            [FromQuery] int? minPrice = null,
+            [FromQuery] int? maxPrice = null,
+            [FromHeader(Name = "X-User-Id")] int? userId = null)
+        {
+            try
+            {
+                var filterOptions = await _enrichedServices.GetFilterOptionsAsync(
+                    name, type, rarity, dateFrom, dateTo, 
+                    onlyNew, onlyInShop, onlyOnSale, onlyOwned, onlyBundle,
+                    minPrice, maxPrice, userId);
+                return Ok(filterOptions);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Erro ao buscar opções de filtros", error = ex.Message });
+            }
+        }
     }
 
     public class PurchaseRequest

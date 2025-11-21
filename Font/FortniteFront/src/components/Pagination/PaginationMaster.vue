@@ -2,17 +2,6 @@
   <div class="pagination-master">
     <FilterTabs :modelValue="props.selectedTab" @update:modelValue="handleTabChange" />
 
-    <div class="top-controls">
-      <FilterStar 
-        :modelValue="sortBy" 
-        @update:modelValue="updateSort" 
-      />
-      <FilterPageSize 
-        :modelValue="pageSize" 
-        @update:modelValue="updatePageSize" 
-      />
-    </div>
-
     <div class="pagination-controls">
       <div class="p-container">
         <p class="p">Quantidade de resultados: {{ totalItems }}</p>
@@ -22,6 +11,16 @@
           :currentPage="props.currentPage" 
           :totalPages="totalPages"
           @change="handlePageChange"
+        />
+      </div>
+      <div class="right-controls">
+        <FilterStar 
+          :modelValue="sortBy" 
+          @update:modelValue="updateSort" 
+        />
+        <FilterPageSize 
+          :modelValue="pageSize" 
+          @update:modelValue="updatePageSize" 
         />
       </div>
     </div>
@@ -94,7 +93,7 @@ const handleTabChange = (tab) => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   width: 100%;
 }
 
@@ -116,27 +115,29 @@ const handleTabChange = (tab) => {
   flex: 1;
 }
 
-.top-controls {
+.right-controls {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 16px;
   flex-wrap: nowrap;
-  width: 100%;
+  flex-shrink: 0;
 }
 
 @media (max-width: 768px) {
   .pagination-controls {
     flex-direction: column;
     align-items: flex-start;
+    flex-wrap: wrap;
   }
 
   .controls-group {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: center;
   }
   
-  .top-controls {
+  .right-controls {
+    width: 100%;
     justify-content: center;
   }
 }
