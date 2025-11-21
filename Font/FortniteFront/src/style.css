@@ -1,0 +1,151 @@
+* {
+  font-family: "Poppins", sans-serif;
+  color: #ffffff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: #000;
+}
+
+.primarybutton {
+  display: inline-block;
+  border-radius: 40px;
+  border: 2px solid var(--Primary-Gd-1, #1fa2ff);
+  background: #161a42;
+  box-shadow: 0 13px 17px 0 rgba(140, 213, 105, 0.1);
+  color: white;
+  width: 140px;
+  height: 40px;
+  font-family: "Poppins", sans-serif;
+  font-size: 16px;
+  font-style: normal;
+}
+
+.primarybutton:hover {
+  background: linear-gradient(162deg, #1fa2ff 22.61%, #12d8fa 118.29%);
+  border: 2px solid #12d8fa;
+  box-shadow: 0 13px 17px 0 rgba(18, 216, 250, 0.1);
+  cursor: pointer;
+  color: #000000;
+}
+
+.secondarybutton {
+  border-radius: 40px;
+  border: 2px solid #212554;
+  background: linear-gradient(
+    162deg,
+    #161a42 22.61%,
+    rgba(22, 26, 66, 0) 118.29%
+  );
+  color: white;
+  width: 140px;
+  height: 40px;
+}
+
+.secondarybutton:hover {
+  background: #212554;
+  border: 2px solid #1fa2ff;
+  cursor: pointer;
+  color: #1fa2ff;
+}
+
+.h1 {
+  color: #e2e4e9;
+  font-size: 32px;
+  font-style: normal;
+  font-weight: 700;
+  font-family: "Quicksand", sans-serif;
+}
+
+.title-section {
+  margin-left: 40px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 64px;
+}
+
+/* Estilização personalizada para barras de rolagem */
+
+/* Webkit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #137BBE 0%, #12D8FA 100%);
+  border-radius: 10px;
+  border: 2px solid #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #1fa2ff 0%, #12d8fa 100%);
+  box-shadow: 0 0 8px rgba(18, 216, 250, 0.5);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #12D8FA #1a1a1a;
+}
+
+/* Estilização específica para elementos com scroll */
+.scrollable {
+  scrollbar-width: thin;
+  scrollbar-color: #12D8FA #1a1a1a;
+}
+
+.scrollable::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 8px;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #137BBE 0%, #12D8FA 100%);
+  border-radius: 8px;
+  border: 1px solid #1a1a1a;
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #1fa2ff 0%, #12d8fa 100%);
+}
+
+/* Scroll fino para modais e containers pequenos */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #00E0FF #2a2a2a;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scroll-thin::-webkit-scrollbar-track {
+  background: #2a2a2a;
+  border-radius: 6px;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #00E0FF;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb:hover {
+  background: #12D8FA;
+  box-shadow: 0 0 6px rgba(18, 216, 250, 0.4);
+}
