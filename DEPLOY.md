@@ -75,31 +75,28 @@ O backend já está configurado. Você só precisa garantir que o CORS aceite a 
 
 4. **⚠️ CONFIGURE O ROOT DIRECTORY ANTES DE QUALQUER COISA:**
    - Após selecionar o repositório, **NÃO clique em Deploy ainda**
-   - Clique em **"Settings"** (ou "Configure")
-   - Procure por **"Root Directory"** ou **"Working Directory"**
+   - Na seção **"Source Repo"**, clique em **"Add Root Directory"**
    - Digite: `Back` ← **MUITO IMPORTANTE!**
-   - Salve as configurações
+   - Clique em **"Update"** para salvar
 
-5. **Escolha o método de build:**
+5. **Configure o Builder (Build):**
+   - Na seção **"Build"**, certifique-se de que **"Dockerfile"** está selecionado
+   - Em **"Dockerfile Path"**, deixe vazio ou digite: `Back/Dockerfile`
+     - ⚠️ **Nota**: Com Root Directory = `Back`, o Railway procura o Dockerfile dentro dessa pasta automaticamente
+   - Em **"Watch Paths"**, adicione: `/Back/**` (para fazer deploy quando houver mudanças na pasta Back)
 
-   **Opção A: Usar Nixpacks (Recomendado - detecção automática)**
-   - Vá em **Settings** → **Service Source**
-   - Selecione **"Nixpacks"**
-   - ⚠️ **IMPORTANTE**: Certifique-se de que o **Root Directory** está configurado como `Back`
-   - O Railway deve detectar automaticamente o projeto .NET
-   
-   **Opção B: Usar Dockerfile (se tiver problemas com Nixpacks)**
-   - Você precisaria criar um Dockerfile na pasta `Back`
-   - Mas como removemos Docker, use a Opção A
+6. **Configure o Deploy:**
+   - Na seção **"Deploy"**, em **"Custom Start Command"**, **DEIXE VAZIO**
+     - ⚠️ **Importante**: O Dockerfile já define o comando de start via `ENTRYPOINT`, não precisa configurar aqui
 
-6. **Adicione variáveis de ambiente:**
+7. **Adicione variáveis de ambiente:**
    - Vá em **Variables**
    - Adicione:
      - `ASPNETCORE_ENVIRONMENT`: `Production`
      - `ASPNETCORE_URLS`: `http://+:${PORT}` (Railway define PORT automaticamente)
      - `PORT`: Deixe Railway definir automaticamente (não precisa adicionar manualmente)
 
-7. **Agora sim, faça o deploy:**
+8. **Agora sim, faça o deploy:**
    - Clique em **"Deploy"** ou aguarde o deploy automático
    - Aguarde o build completar
    - Copie a URL gerada (ex: `https://seu-projeto.railway.app`)
