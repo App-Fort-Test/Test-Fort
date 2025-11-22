@@ -176,48 +176,82 @@ var app = builder.Build();
 // Criar banco de dados se não existir
 using (var scope = app.Services.CreateScope())
 {
-    // Tentar criar o banco com retry
-    int maxRetries = 3;
-    int retryDelay = 1000; // 1 segundo
+    int maxRetries = 5;
+    int retryDelay = 2000;
     bool dbCreated = false;
     
     try
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         
+        Console.WriteLine($"=== Iniciando criação do banco de dados ===");
+        Console.WriteLine($"Caminho do banco: {dbPath}");
+        Console.WriteLine($"Diretório: {dbDirectory}");
+        Console.WriteLine($"Diretório existe: {Directory.Exists(dbDirectory)}");
+        Console.WriteLine($"Permissão de escrita: {IsDirectoryWritable(dbDirectory)}");
+        Console.WriteLine($"Ambiente: {app.Environment.EnvironmentName}");
+        
         for (int i = 0; i < maxRetries; i++)
         {
             try
             {
+                Console.WriteLine($"Tentativa {i + 1}/{maxRetries} de criar o banco...");
+                
+                if (!Directory.Exists(dbDirectory))
+                {
+                    Console.WriteLine($"Criando diretório: {dbDirectory}");
+                    Directory.CreateDirectory(dbDirectory);
+                }
+                
                 dbContext.Database.EnsureCreated();
-                Console.WriteLine($"Banco de dados criado/verificado em: {dbPath}");
+                
+                if (File.Exists(dbPath))
+                {
+                    var fileInfo = new FileInfo(dbPath);
+                    Console.WriteLine($"✅ Banco de dados criado/verificado com sucesso!");
+                    Console.WriteLine($"   Caminho: {dbPath}");
+                    Console.WriteLine($"   Tamanho: {fileInfo.Length} bytes");
+                    Console.WriteLine($"   Criado em: {fileInfo.CreationTime}");
+                }
+                else
+                {
+                    Console.WriteLine($"⚠️ EnsureCreated() executou, mas arquivo não encontrado: {dbPath}");
+                }
+                
                 dbCreated = true;
                 break;
             }
             catch (Exception ex) when (i < maxRetries - 1)
             {
-                Console.WriteLine($"Tentativa {i + 1} falhou: {ex.Message}. Tentando novamente em {retryDelay}ms...");
-                Thread.Sleep(retryDelay);
+                Console.WriteLine($"❌ Tentativa {i + 1} falhou: {ex.GetType().Name}: {ex.Message}");
+                Console.WriteLine($"   StackTrace: {ex.StackTrace}");
+                Console.WriteLine($"   Aguardando {retryDelay}ms antes de tentar novamente...");
                 
-                // Tentar limpar arquivos temporários novamente
+                Thread.Sleep(retryDelay);
                 CleanSqliteTempFiles(dbPath);
+                
+                retryDelay = Math.Min(retryDelay * 2, 10000);
             }
+        }
+        
+        if (!dbCreated)
+        {
+            throw new Exception($"Não foi possível criar o banco após {maxRetries} tentativas");
         }
     }
     catch (Exception ex)
     {
-        Console.WriteLine($"Erro ao criar banco de dados após {maxRetries} tentativas: {ex.Message}");
-        Console.WriteLine($"Caminho tentado: {dbPath}");
-        Console.WriteLine($"Diretório atual: {Directory.GetCurrentDirectory()}");
-        Console.WriteLine($"Diretório existe: {Directory.Exists(Directory.GetCurrentDirectory())}");
-        Console.WriteLine($"Permissão de escrita: {IsDirectoryWritable(Directory.GetCurrentDirectory())}");
-        // Não lançar exceção para permitir que a aplicação inicie mesmo com erro no banco
-        // O banco será criado na primeira requisição que precisar dele
-    }
-    
-    if (!dbCreated)
-    {
-        Console.WriteLine($"Aviso: Banco de dados não foi criado após {maxRetries} tentativas. A aplicação continuará, mas o banco será criado na primeira requisição.");
+        Console.WriteLine($"❌ ERRO CRÍTICO ao criar banco de dados:");
+        Console.WriteLine($"   Mensagem: {ex.Message}");
+        Console.WriteLine($"   Tipo: {ex.GetType().Name}");
+        Console.WriteLine($"   Caminho tentado: {dbPath}");
+        Console.WriteLine($"   Diretório atual: {Directory.GetCurrentDirectory()}");
+        Console.WriteLine($"   RAILWAY_VOLUME_MOUNT_PATH: {Environment.GetEnvironmentVariable("RAILWAY_VOLUME_MOUNT_PATH") ?? "não definido"}");
+        Console.WriteLine($"   Diretório existe: {Directory.Exists(dbDirectory)}");
+        Console.WriteLine($"   Permissão de escrita: {IsDirectoryWritable(dbDirectory)}");
+        
+        Console.WriteLine($"⚠️ A aplicação continuará, mas o banco será criado na primeira requisição.");
+        Console.WriteLine($"💡 Dica: Verifique se o volume persistente está configurado no Railway.");
     }
 }
 
