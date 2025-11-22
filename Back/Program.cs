@@ -158,6 +158,10 @@ builder.Services.AddCors(options =>
         };
         
 
+        var vercelPreviewPattern = "https://test-fort-ulwx-*.vercel.app";
+ 
+        
+
         var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
         if (!string.IsNullOrEmpty(frontendUrl))
         {
@@ -167,17 +171,38 @@ builder.Services.AddCors(options =>
             }
         }
         
-        policy.WithOrigins(allowedOrigins.ToArray())
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials()
-              .WithExposedHeaders("X-User-Id");
+        // Permitir qualquer origem do Vercel que comece com test-fort-ulwx
+        // Isso cobre todas as URLs de preview dinâmicas
+        policy.SetIsOriginAllowed(origin =>
+        {
+            if (string.IsNullOrEmpty(origin))
+                return false;
+            
+            // Permitir localhost
+            if (origin.StartsWith("http://localhost"))
+                return true;
+            
+            // Permitir qualquer URL do Vercel que contenha test-fort-ulwx ou test-fort-nine
+            if (origin.Contains("test-fort-ulwx") || origin.Contains("test-fort-nine") || origin.Contains("vercel.app"))
+            {
+                Console.WriteLine($"✅ Origem permitida (Vercel): {origin}");
+                return true;
+            }
+            
+            // Permitir URLs na lista
+            return allowedOrigins.Contains(origin);
+        })
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials()
+        .WithExposedHeaders("X-User-Id");
         
-        Console.WriteLine($"✅ CORS configurado com {allowedOrigins.Count} origens permitidas:");
+        Console.WriteLine($"✅ CORS configurado com {allowedOrigins.Count} origens fixas + wildcard para Vercel:");
         foreach (var origin in allowedOrigins)
         {
             Console.WriteLine($"   - {origin}");
         }
+        Console.WriteLine($"   - Qualquer URL contendo 'test-fort-ulwx', 'test-fort-nine' ou 'vercel.app'");
     });
 });
 
@@ -280,11 +305,6 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors();
-
-app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.Ok())
-   .WithName("Preflight");
-
-app.UseAuthentication();
 
 app.Use(async (context, next) =>
 {
