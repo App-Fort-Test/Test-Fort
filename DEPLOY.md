@@ -233,6 +233,19 @@ builder.Services.AddCors(options =>
 ### Erro: "No .NET SDKs were found" ou "The application 'run' does not exist"
 - **Causa**: O Railway está usando Nixpacks (geração automática) em vez do Dockerfile
 - **Solução URGENTE**:
+  
+  **Opção 1: Usar arquivo railway.json (RECOMENDADO - força o uso do Dockerfile)**
+  1. O arquivo `Back/railway.json` já foi criado e força o uso do Dockerfile
+  2. **Faça commit e push**:
+     ```bash
+     git add Back/railway.json
+     git commit -m "Adiciona railway.json para forçar uso do Dockerfile"
+     git push origin main
+     ```
+  3. O Railway detectará automaticamente o `railway.json` e usará o Dockerfile
+  4. Force um novo deploy no Railway
+  
+  **Opção 2: Configurar manualmente no Railway**
   1. **No Railway, vá em Settings → Build**
   2. **MUDE o Builder para "Dockerfile"**:
      - Se estiver "Nixpacks" ou "Auto-detect", clique e selecione **"Dockerfile"**
