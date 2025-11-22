@@ -9,7 +9,20 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // Permitir roteamento case-insensitive
+        options.SuppressModelStateInvalidFilter = true;
+    });
+
+// Configurar roteamento case-insensitive
+builder.Services.Configure<RouteOptions>(options =>
+{
+    options.LowercaseUrls = true;
+    options.LowercaseQueryStrings = true;
+});
+
 builder.Services.AddHttpClient(); 
 
 // Função auxiliar para verificar permissão de escrita (definida antes de usar)
@@ -121,11 +134,22 @@ builder.Services.AddCors(options =>
             allowedOrigins.Add(frontendUrl);
         }
         
-        policy.WithOrigins(allowedOrigins.ToArray())
-              .AllowAnyMethod()
-              .AllowAnyHeader()
-              .AllowCredentials()
-              .WithExposedHeaders("X-User-Id"); // Expor o header customizado
+        // Em produção, permitir qualquer origem (para facilitar debug)
+        if (builder.Environment.IsProduction())
+        {
+            policy.AllowAnyOrigin()
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .WithExposedHeaders("X-User-Id");
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins.ToArray())
+                  .AllowAnyMethod()
+                  .AllowAnyHeader()
+                  .AllowCredentials()
+                  .WithExposedHeaders("X-User-Id");
+        }
     });
 });
 
@@ -192,7 +216,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// No Railway, não usar HTTPS redirection (usa HTTP)
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseRouting();
 
