@@ -18,10 +18,10 @@ namespace Backend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetTransactionHistory([FromHeader(Name = "X-User-Id")] string? userIdHeader = null)
         {
-            // Tentar obter userId do header (pode vir como string)
+        
             int? userId = null;
             
-            // Log para debug
+       
             Console.WriteLine($"GetTransactionHistory chamado - userIdHeader: {userIdHeader}");
             Console.WriteLine($"Request.Headers contém X-User-Id: {Request.Headers.ContainsKey("X-User-Id")}");
             if (Request.Headers.ContainsKey("X-User-Id"))
@@ -38,7 +38,7 @@ namespace Backend.Controllers
                 }
             }
             
-            // Se não conseguiu do header, tentar do Request.Headers diretamente
+    
             if (!userId.HasValue && Request.Headers.TryGetValue("X-User-Id", out var headerValue))
             {
                 var headerString = headerValue.ToString().Trim();
@@ -77,7 +77,7 @@ namespace Backend.Controllers
         [HttpGet("owned")]
         public async Task<IActionResult> GetOwnedCosmetics([FromHeader(Name = "X-User-Id")] string? userIdHeader = null)
         {
-            // Tentar obter userId do header
+        
             int? userId = null;
             if (!string.IsNullOrEmpty(userIdHeader))
             {
@@ -87,7 +87,7 @@ namespace Backend.Controllers
                 }
             }
             
-            // Se não conseguiu do header, tentar do Request.Headers diretamente
+    
             if (!userId.HasValue && Request.Headers.TryGetValue("X-User-Id", out var headerValue))
             {
                 if (int.TryParse(headerValue.ToString(), out int parsedUserId))
@@ -101,7 +101,6 @@ namespace Backend.Controllers
                 return Unauthorized(new { message = "É necessário estar logado para ver os itens possuídos" });
             }
             
-            // Obter itens possuídos baseado nas transações
             var ownedCosmetics = await _inventoryService.GetOwnedCosmeticsFromTransactionsAsync(userId.Value);
             
             return Ok(new
@@ -113,7 +112,7 @@ namespace Backend.Controllers
         [HttpPost("refund/{cosmeticId}")]
         public async Task<IActionResult> RefundCosmetic(string cosmeticId, [FromHeader(Name = "X-User-Id")] string? userIdHeader = null, [FromBody] RefundRequest? request = null)
         {
-            // Tentar obter userId do header (pode vir como string)
+
             int? userId = null;
             if (!string.IsNullOrEmpty(userIdHeader))
             {
@@ -123,7 +122,7 @@ namespace Backend.Controllers
                 }
             }
             
-            // Se não conseguiu do header, tentar do Request.Headers diretamente
+   
             if (!userId.HasValue && Request.Headers.TryGetValue("X-User-Id", out var headerValue))
             {
                 if (int.TryParse(headerValue.ToString(), out int parsedUserId))
@@ -137,7 +136,7 @@ namespace Backend.Controllers
                 return Unauthorized(new { message = "É necessário estar logado para devolver cosméticos" });
             }
             
-            // Validar cosmeticId
+
             if (string.IsNullOrWhiteSpace(cosmeticId))
             {
                 return BadRequest(new { message = "ID do cosmético é obrigatório" });

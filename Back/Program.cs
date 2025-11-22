@@ -14,6 +14,11 @@ builder.Services.AddHttpClient();
 // Configurar Entity Framework com SQLite
 // Usar caminho absoluto para evitar problemas de permissão
 var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "fortnite.db");
+var dbDirectory = Path.GetDirectoryName(dbPath);
+if (!string.IsNullOrEmpty(dbDirectory) && !Directory.Exists(dbDirectory))
+{
+    Directory.CreateDirectory(dbDirectory);
+}
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite($"Data Source={dbPath}"));
 
@@ -78,8 +83,20 @@ var app = builder.Build();
 // Criar banco de dados se não existir
 using (var scope = app.Services.CreateScope())
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    dbContext.Database.EnsureCreated();
+    try
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        dbContext.Database.EnsureCreated();
+        Console.WriteLine($"Banco de dados criado/verificado em: {dbPath}");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Erro ao criar banco de dados: {ex.Message}");
+        Console.WriteLine($"Caminho tentado: {dbPath}");
+        Console.WriteLine($"Diretório atual: {Directory.GetCurrentDirectory()}");
+        // Não lançar exceção para permitir que a aplicação inicie mesmo com erro no banco
+        // O banco será criado na primeira requisição que precisar dele
+    }
 }
 
 if (app.Environment.IsDevelopment())

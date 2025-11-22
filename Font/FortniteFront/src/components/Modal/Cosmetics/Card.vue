@@ -616,12 +616,12 @@ const getStatusBadgePosition = (badgeType) => {
     if (props.cosmetic?.isBundle) statusBadges.push('bundle');
     if (props.cosmetic?.isAdquirir) statusBadges.push('adquirido');
     
-    // Encontrar o índice do badge atual na lista
+   
     const index = statusBadges.indexOf(badgeType);
     
-    if (index === -1) return 8; // Se não encontrado, retorna posição padrão
+    if (index === -1) return 8; 
     
-    return 8 + (index * 40); // 32px (altura) + 8px (gap) = 40px
+    return 8 + (index * 40); 
 };
 
 

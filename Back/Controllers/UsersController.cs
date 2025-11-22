@@ -19,7 +19,7 @@ namespace Backend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            // Otimização: buscar usuários e contagem de cosméticos em paralelo
+           
             var usersQuery = _context.Users
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
@@ -33,7 +33,7 @@ namespace Backend.Controllers
             
             var totalUsersQuery = _context.Users.CountAsync();
             
-            // Executar queries em paralelo
+           
             var usersTask = usersQuery.ToListAsync();
             var totalUsersTask = totalUsersQuery;
             
@@ -42,7 +42,7 @@ namespace Backend.Controllers
             var users = await usersTask;
             var totalUsers = await totalUsersTask;
             
-            // Buscar contagem de cosméticos e transações apenas para os usuários da página atual (mais eficiente)
+          
             var userIds = users.Select(u => u.id).ToList();
             var cosmeticsCounts = await _context.UserCosmetics
                 .Where(uc => userIds.Contains(uc.UserId))

@@ -275,7 +275,7 @@
       </div>
     </BaseModal>
 
-    <!-- Modal de Detalhes do Cosmético -->
+   
     <BaseModal v-if="selectedCosmetic" @close="closeCosmeticDetails">
       <CosmeticDetailsModal 
         :cosmetic="selectedCosmetic" 
