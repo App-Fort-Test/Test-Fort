@@ -33,6 +33,9 @@ O frontend já está configurado para usar variáveis de ambiente. Você precisa
 
 4. **Configure o projeto:**
    - ⚠️ **IMPORTANTE**: Clique em "Configure Project" antes de fazer deploy
+   - **Project Name**: Use apenas letras, números e underscores
+     - ❌ **NÃO use**: hífens (`test-fort`), espaços, ou começar com número
+     - ✅ **Use**: `test_fort`, `testfort`, `fortnite_front`, etc.
    - **Root Directory**: `Font/FortniteFront` ← Configure isso!
    - **Framework Preset**: Vite (ou deixe auto-detect)
    - **Build Command**: `npm run build` (já vem preenchido)
@@ -47,17 +50,26 @@ O frontend já está configurado para usar variáveis de ambiente. Você precisa
 
 ### Passo 3: Configurar Variável de Ambiente (Após Deploy do Backend)
 
-Após fazer o deploy do backend no Railway e obter a URL, volte ao Vercel:
+Após fazer o deploy do backend no Railway e obter a URL, configure no Vercel:
 
+**Durante a criação do projeto (ou depois em Settings):**
+
+1. Na seção **"Environment Variables"** (ou **"Add Environment Variable"**)
+2. Adicione:
+   - **Key/Name**: `VITE_API_BASE_URL`
+   - **Value**: `https://test-fort-production.up.railway.app/api`
+     - ⚠️ **IMPORTANTE**: 
+       - Deve começar com `https://`
+       - Deve terminar com `/api`
+       - Formato completo: `https://sua-url-railway.app/api`
+3. Selecione **"Production"**, **"Preview"** e **"Development"** (ou apenas Production)
+4. Clique em **"Add"** ou **"Save"**
+
+**Se já criou o projeto:**
 1. Vá em **Settings** → **Environment Variables**
 2. Clique em **"Add New"**
-3. Adicione:
-   - **Name**: `VITE_API_BASE_URL`
-   - **Value**: URL do backend do Railway + `/api`
-     - Exemplo: `https://seu-backend.railway.app/api`
-4. Selecione **"Production"**, **"Preview"** e **"Development"**
-5. Clique em **"Save"**
-6. Vá em **Deployments** → Clique nos três pontos do último deploy → **"Redeploy"**
+3. Adicione a mesma variável acima
+4. Vá em **Deployments** → Clique nos três pontos do último deploy → **"Redeploy"**
 
 ## 🔧 Deploy do Backend (Railway)
 
@@ -79,13 +91,15 @@ O backend já está configurado. Você só precisa garantir que o CORS aceite a 
    - Digite: `Back` ← **MUITO IMPORTANTE!**
    - Clique em **"Update"** para salvar
 
-5. **Configure o Builder (Build):**
-   - Na seção **"Build"**, certifique-se de que **"Dockerfile"** está selecionado (NÃO "Nixpacks")
-   - ⚠️ **IMPORTANTE**: Se estiver usando "Nixpacks", mude para "Dockerfile"
-   - Em **"Dockerfile Path"**, deixe vazio (o Railway encontrará automaticamente o `Dockerfile` dentro da pasta `Back`)
+5. **Configure o Builder (Build) - ⚠️ MUITO IMPORTANTE:**
+   - Na seção **"Build"**, procure por **"Builder"** ou **"Build Method"**
+   - **MUDE para "Dockerfile"** (NÃO deixe como "Nixpacks" ou "Auto-detect")
+   - ⚠️ **Se estiver "Nixpacks"**: Clique e mude para **"Dockerfile"**
+   - Em **"Dockerfile Path"**, deixe **VAZIO** (não digite nada)
      - ⚠️ **Nota**: Com Root Directory = `Back`, o Railway procura o Dockerfile dentro dessa pasta automaticamente
-     - ❌ **NÃO use**: `Back/Dockerfile` (isso procuraria `Back/Back/Dockerfile`)
+     - ❌ **NÃO use**: `Back/Dockerfile` ou `Dockerfile` (isso pode causar problemas)
    - Em **"Watch Paths"**, adicione: `/Back/**` (para fazer deploy quando houver mudanças na pasta Back)
+   - **Salve as configurações** antes de fazer deploy
 
 6. **Configure o Deploy:**
    - Na seção **"Deploy"**, em **"Custom Start Command"**, **DEIXE VAZIO**
@@ -107,7 +121,18 @@ O backend já está configurado. Você só precisa garantir que o CORS aceite a 
 9. **Agora sim, faça o deploy:**
    - Clique em **"Deploy"** ou aguarde o deploy automático
    - Aguarde o build completar
-   - Copie a URL gerada (ex: `https://seu-projeto.railway.app`)
+
+10. **Obtenha a URL do backend (IMPORTANTE):**
+    - Após o deploy bem-sucedido, vá na página principal do serviço no Railway
+    - Você verá **"Unexposed service"** (serviço não exposto) - isso significa que não há URL pública ainda
+    - Para gerar a URL pública:
+      1. Na página do serviço, procure a seção **"Networking"** (pode estar na lateral ou no topo)
+      2. Ou vá em **Settings** → **Networking**
+      3. Procure por **"Public Networking"** ou **"Generate Domain"**
+      4. Clique em **"Generate Domain"** para criar uma URL pública
+    - Após gerar, a URL aparecerá na página do serviço (ex: `https://test-fort-production.up.railway.app`)
+    - **Copie essa URL completa** (sem `/api` no final)
+    - Você usará essa URL no Vercel como: `https://sua-url-railway.app/api`
 
 ### Passo 3: Configurar CORS no Backend
 
@@ -205,24 +230,70 @@ builder.Services.AddCors(options =>
   3. No Railway, limpe o cache de build
   4. Force um novo deploy
 
+### Erro: "No .NET SDKs were found" ou "The application 'run' does not exist"
+- **Causa**: O Railway está usando Nixpacks (geração automática) em vez do Dockerfile
+- **Solução URGENTE**:
+  1. **No Railway, vá em Settings → Build**
+  2. **MUDE o Builder para "Dockerfile"**:
+     - Se estiver "Nixpacks" ou "Auto-detect", clique e selecione **"Dockerfile"**
+     - Isso é CRÍTICO - o Railway DEVE usar o Dockerfile, não Nixpacks
+  3. **Em "Dockerfile Path"**, deixe **VAZIO**
+  4. **Salve as configurações**
+  5. **Limpe o cache** (Settings → Deploy → Clear Cache)
+  6. **Force um novo deploy** (Deployments → Redeploy)
+
 ### Erro: "MSB1003: Specify a project or solution file" ou ".NET 6.0" no build
 - **Causa**: O Railway está usando Nixpacks (geração automática) ou um Dockerfile em cache antigo
-- **Solução**:
-  1. No Railway, vá em **Settings** → **Build**
-  2. Certifique-se de que **"Dockerfile"** está selecionado (NÃO "Nixpacks")
-  3. Em **"Dockerfile Path"**, deixe vazio (não use `Back/Dockerfile`)
-  4. Limpe o cache de build
-  5. Force um novo deploy
-  6. Verifique se o Root Directory está configurado como `Back`
+- **Solução COMPLETA**:
+  1. **No Railway, vá em Settings → Build**
+  2. **Certifique-se de que "Dockerfile" está selecionado** (NÃO "Nixpacks")
+     - Se estiver "Nixpacks", mude para "Dockerfile"
+  3. **Em "Dockerfile Path"**, deixe **VAZIO** (não use `Back/Dockerfile`)
+     - ⚠️ Com Root Directory = `Back`, o Railway procura o Dockerfile dentro dessa pasta automaticamente
+  4. **Verifique o Root Directory**:
+     - Vá em **Settings → Source**
+     - Certifique-se de que **Root Directory** está como `Back`
+  5. **Limpe o cache de build**:
+     - Vá em **Settings → Deploy**
+     - Procure por **"Clear Build Cache"** ou **"Clear Cache"**
+     - Clique para limpar
+  6. **Force um novo deploy**:
+     - Vá em **Deployments**
+     - Clique nos três pontos do último deploy → **"Redeploy"**
+     - Ou delete o último deploy e crie um novo
+  7. **Verifique se o Dockerfile está no repositório**:
+     - O arquivo deve estar em `Back/Dockerfile`
+     - Deve usar `.NET 8.0` (não `.NET 6.0`)
+     - Deve copiar `Backend.csproj` primeiro, depois fazer `dotnet restore`
 
 ### Erro de CORS
 - Verifique se a URL do frontend está nas origens permitidas do backend
 - Certifique-se de que a variável `FRONTEND_URL` está configurada no Railway
 - Verifique se o código do CORS foi atualizado para usar a variável de ambiente
 
-### Erro 404 no Frontend
+### Erro Vercel: "404: NOT_FOUND - DEPLOYMENT_NOT_FOUND"
+- **Causa**: O deploy ainda não foi iniciado ou falhou durante a criação do projeto
+- **Solução**:
+  1. Verifique se você clicou em **"Deploy"** após configurar o projeto
+  2. Vá na página do projeto no Vercel e verifique a aba **"Deployments"**
+  3. Se não houver nenhum deploy, clique em **"Redeploy"** ou **"Deploy"**
+  4. Verifique se o **Root Directory** está configurado corretamente: `Font/FortniteFront`
+  5. Verifique os logs do deploy para ver se há erros de build
+  6. Se o projeto não foi criado corretamente, delete e crie novamente
+
+### Erro 404 no Frontend (após deploy)
 - Verifique se o `vercel.json` está configurado corretamente (se existir)
 - Certifique-se de que o build está gerando a pasta `dist`
+- Verifique se a URL está correta (pode ter mudado após o deploy)
+
+### Erro: "Failed to get private network endpoint" (Private Networking)
+- **Causa**: Erro ao configurar a rede privada do Railway (não é crítico)
+- **Solução**: 
+  - Isso **não impede o deploy** - é apenas um aviso
+  - Private Networking é usado apenas para comunicação entre serviços Railway
+  - Se você só tem um serviço (backend), pode ignorar esse erro
+  - Se precisar corrigir: desative e reative o Private Networking nas configurações
+  - Ou simplesmente ignore - o serviço público (HTTP) continuará funcionando normalmente
 
 ### Backend não inicia no Railway
 - Verifique os logs no Railway
