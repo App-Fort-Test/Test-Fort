@@ -209,28 +209,6 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
     try {
         const success = await purchaseCosmetic(cosmeticId, price, cosmeticName);
         if (success) {
-            const cosmeticIndex = cosmetics.value.findIndex(c => c.id === cosmeticId);
-            if (cosmeticIndex !== -1) {
-                cosmetics.value[cosmeticIndex] = {
-                    ...cosmetics.value[cosmeticIndex],
-                    isOwned: true,
-                    isAdquirir: true
-                };
-                console.log('Estado local atualizado - item marcado como possuído');
-            }
-            
-            console.log('Compra bem-sucedida, atualizando interface...');
-            
-            await new Promise(resolve => setTimeout(resolve, 300));
-            
-            await loadVBucks();
-            const { useAuth } = await import('../../../composables/useAuth');
-            const { updateVBucks } = useAuth();
-            if (vbucks.value !== undefined && vbucks.value !== null) {
-                updateVBucks(vbucks.value);
-                console.log('V-bucks atualizado no header:', vbucks.value);
-            }
-            
             try {
                 const { useTransactions } = await import('../../../composables/useTransactions');
                 const { triggerTransactionUpdate } = useTransactions();
@@ -238,8 +216,6 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
             } catch (e) {
                 console.warn('Erro ao disparar evento de atualização:', e);
             }
-            
-            await searchCosmetics(true);
             
             alert('Item adquirido com sucesso!');
         } else {
@@ -266,24 +242,6 @@ const handleRefund = async (cosmeticId, cosmeticName) => {
         const success = await refundCosmetic(cosmeticId, cosmeticName);
         
         if (success) {
-            const cosmeticIndex = cosmetics.value.findIndex(c => c.id === cosmeticId);
-            if (cosmeticIndex !== -1) {
-                cosmetics.value[cosmeticIndex] = {
-                    ...cosmetics.value[cosmeticIndex],
-                    isOwned: false,
-                };
-                console.log('Estado local atualizado - item removido de possuídos e disponível para compra');
-            }
-            
-            const { useAuth } = await import('../../../composables/useAuth');
-            const { updateVBucks } = useAuth();
-            await loadVBucks();
-            if (vbucks.value) {
-                updateVBucks(vbucks.value);
-            }
-            
-            await searchCosmetics(true);
-            
             try {
                 const { useTransactions } = await import('../../../composables/useTransactions');
                 const { triggerTransactionUpdate } = useTransactions();
@@ -292,7 +250,6 @@ const handleRefund = async (cosmeticId, cosmeticName) => {
                 console.warn('Erro ao disparar evento de atualização:', e);
             }
             
-            await searchCosmetics(true);
             alert('Cosmético devolvido com sucesso!');
         } else {
             alert(error.value || 'Erro ao devolver cosmético');

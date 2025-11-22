@@ -212,7 +212,7 @@ builder.Services.AddCors(options =>
 - [ ] ⚠️ **Root Directory configurado**: `Back` (muito importante!)
 - [ ] Build e Start commands configurados automaticamente
 - [ ] Variáveis de ambiente configuradas:
-  - [ ] `ASPNETCORE_ENVIRONMENT`: `Production`
+  - [ ] `ASPNETCORE_ENVIRONMENT`: `Production
   - [ ] `ASPNETCORE_URLS`: `http://+:${PORT}`
 - [ ] ⚠️ **Volume persistente configurado** (para SQLite não perder dados entre rebuilds)
   - [ ] Volume criado no Railway com Mount Path: `/data`
@@ -252,7 +252,7 @@ builder.Services.AddCors(options =>
 2. Clique em **"Add Volume"**
 3. Configure:
    - **Mount Path**: `/data` (ou `/app/data`)
-4. Adicione variável de ambiente:
+4. Adic`ione variável de ambiente:
    - `RAILWAY_VOLUME_MOUNT_PATH`: `/data`
 5. O código já está configurado para usar essa variável automaticamente
 
