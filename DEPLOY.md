@@ -465,7 +465,28 @@ O código já tenta usar `RAILWAY_VOLUME_MOUNT_PATH` ou `/tmp`, mas `/tmp` tamb�
 - Verifique se o banco de dados SQLite está sendo criado
 - Verifique se o Root Directory está configurado como `Back`
 
-### Erro Railway: "Railpack could not determine how to build the app"
+### Erro Railway: "Railpack could not determine how to build the app" ⚠️ URGENTE
+
+**Sintoma**: Logs mostram:
+```
+⚠ Script start.sh not found
+✖ Railpack could not determine how to build the app.
+```
+
+**Causa**: O Railway está usando Railpack/Nixpacks em vez do Dockerfile.
+
+**Solução RÁPIDA**:
+1. Acesse: https://railway.com/project/f91c4260-84da-457e-9311-5da58bedc6f9/service/395283a7-0e23-492b-a4e3-a02aebb6fb76/settings
+2. Vá em **Settings** → **Build**
+3. **MUDE o Builder de "Nixpacks"/"Railpack" para "Dockerfile"**
+4. Em **"Dockerfile Path"**, deixe **VAZIO**
+5. Verifique **Root Directory** = `Back`
+6. Limpe o cache (Settings → Deploy → Clear Cache)
+7. Faça **Redeploy**
+
+Veja também: `FIX_RAILPACK_ERROR.md` para instruções detalhadas.
+
+### Erro Railway: "Railpack could not determine how to build the app" (versão antiga)
 - ⚠️ **Verifique o Root Directory!** Deve estar configurado como `Back`
 - No Railway: Settings → Root Directory → `Back`
 - Se ainda não funcionar, delete o serviço e crie novamente, configurando o Root Directory ANTES do primeiro deploy
