@@ -255,6 +255,25 @@ builder.Services.AddCors(options =>
   5. **Limpe o cache** (Settings → Deploy → Clear Cache)
   6. **Force um novo deploy** (Deployments → Redeploy)
 
+### Erro: "Dockerfile `Dockerfile` does not exist"
+- **Causa**: O Railway não está encontrando o Dockerfile mesmo com Root Directory configurado
+- **Solução**:
+  1. **Verifique se o Dockerfile está no repositório**:
+     - O arquivo deve estar em `Back/Dockerfile`
+     - Deve estar commitado no Git
+  2. **Verifique o Root Directory no Railway**:
+     - Vá em **Settings → Source**
+     - Certifique-se de que **Root Directory** está como `Back` (sem barra no final)
+  3. **No railway.json, remova o dockerfilePath** (deixe o Railway detectar automaticamente):
+     - O arquivo `Back/railway.json` já está configurado corretamente
+  4. **Faça commit e push**:
+     ```bash
+     git add Back/railway.json
+     git commit -m "Ajusta railway.json para detecção automática do Dockerfile"
+     git push origin main
+     ```
+  5. **Force um novo deploy** no Railway
+
 ### Erro: "MSB1003: Specify a project or solution file" ou ".NET 6.0" no build
 - **Causa**: O Railway está usando Nixpacks (geração automática) ou um Dockerfile em cache antigo
 - **Solução COMPLETA**:
