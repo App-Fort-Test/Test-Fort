@@ -12,16 +12,56 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient(); 
 
+// Função auxiliar para verificar permissão de escrita (definida antes de usar)
+static bool IsDirectoryWritable(string dirPath)
+{
+    try
+    {
+        var testFile = Path.Combine(dirPath, $"test_{Guid.NewGuid()}.tmp");
+        File.WriteAllText(testFile, "test");
+        File.Delete(testFile);
+        return true;
+    }
+    catch
+    {
+        return false;
+    }
+}
+
 // Configurar Entity Framework com SQLite
-// Usar caminho absoluto para evitar problemas de permissão
-var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "fortnite.db");
-var dbDirectory = Directory.GetCurrentDirectory();
+// No Railway, usar diretório persistente ou /tmp se disponível
+var dbDirectory = Environment.GetEnvironmentVariable("RAILWAY_VOLUME_MOUNT_PATH");
+if (string.IsNullOrEmpty(dbDirectory))
+{
+    // Tentar usar /tmp no Railway ou diretório atual
+    var tmpDir = "/tmp";
+    if (Directory.Exists(tmpDir) && IsDirectoryWritable(tmpDir))
+    {
+        dbDirectory = tmpDir;
+    }
+    else
+    {
+        dbDirectory = Directory.GetCurrentDirectory();
+    }
+}
 
 // Garantir que o diretório existe e tem permissões
 if (!Directory.Exists(dbDirectory))
 {
-    Directory.CreateDirectory(dbDirectory);
+    try
+    {
+        Directory.CreateDirectory(dbDirectory);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Aviso: Não foi possível criar diretório {dbDirectory}: {ex.Message}");
+        dbDirectory = Directory.GetCurrentDirectory();
+    }
 }
+
+var dbPath = Path.Combine(dbDirectory, "fortnite.db");
+Console.WriteLine($"Diretório do banco: {dbDirectory}");
+Console.WriteLine($"Caminho completo do banco: {dbPath}");
 
 // Verificar e remover arquivos temporários do SQLite que podem estar bloqueando
 try
@@ -143,22 +183,6 @@ using (var scope = app.Services.CreateScope())
     if (!dbCreated)
     {
         Console.WriteLine($"Aviso: Banco de dados não foi criado após {maxRetries} tentativas. A aplicação continuará, mas o banco será criado na primeira requisição.");
-    }
-}
-
-// Função auxiliar para verificar permissão de escrita
-static bool IsDirectoryWritable(string dirPath)
-{
-    try
-    {
-        var testFile = Path.Combine(dirPath, $"test_{Guid.NewGuid()}.tmp");
-        File.WriteAllText(testFile, "test");
-        File.Delete(testFile);
-        return true;
-    }
-    catch
-    {
-        return false;
     }
 }
 

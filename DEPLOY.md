@@ -327,6 +327,18 @@ builder.Services.AddCors(options =>
   - Se precisar corrigir: desative e reative o Private Networking nas configurações
   - Ou simplesmente ignore - o serviço público (HTTP) continuará funcionando normalmente
 
+### Erro de conexão com banco de dados no Railway
+- **Causa**: SQLite pode ter problemas de permissão ou o diretório pode ser efêmero no Railway
+- **Solução**:
+  1. **Verifique os logs do Railway** para ver a mensagem de erro específica
+  2. **O código já está configurado** para usar `/tmp` ou diretório persistente se disponível
+  3. **No Railway, considere usar um volume persistente**:
+     - Vá em **Settings → Volumes**
+     - Crie um volume persistente
+     - Configure a variável de ambiente `RAILWAY_VOLUME_MOUNT_PATH` com o caminho do volume
+  4. **Alternativa**: O banco será criado automaticamente na primeira requisição se houver permissão
+  5. **Verifique os logs** para ver onde o banco está sendo criado
+
 ### Backend não inicia no Railway
 - Verifique os logs no Railway
 - Certifique-se de que a porta está configurada corretamente
