@@ -230,30 +230,29 @@ builder.Services.AddCors(options =>
   3. No Railway, limpe o cache de build
   4. Force um novo deploy
 
-### Erro: "No .NET SDKs were found" ou "The application 'run' does not exist"
+### Erro: "Railpack could not determine how to build the app" ou "No .NET SDKs were found"
 - **Causa**: O Railway está usando Nixpacks (geração automática) em vez do Dockerfile
-- **Solução URGENTE**:
+- **Solução URGENTE - CONFIGURE MANUALMENTE NO RAILWAY**:
   
-  **Opção 1: Usar arquivo railway.json (RECOMENDADO - força o uso do Dockerfile)**
-  1. O arquivo `Back/railway.json` já foi criado e força o uso do Dockerfile
-  2. **Faça commit e push**:
-     ```bash
-     git add Back/railway.json
-     git commit -m "Adiciona railway.json para forçar uso do Dockerfile"
-     git push origin main
-     ```
-  3. O Railway detectará automaticamente o `railway.json` e usará o Dockerfile
-  4. Force um novo deploy no Railway
+  ⚠️ **IMPORTANTE**: O Railway precisa ser configurado manualmente para usar o Dockerfile
   
-  **Opção 2: Configurar manualmente no Railway**
-  1. **No Railway, vá em Settings → Build**
+  1. **No Railway, vá em Settings → Build** (ou **Settings → Service Source**)
   2. **MUDE o Builder para "Dockerfile"**:
-     - Se estiver "Nixpacks" ou "Auto-detect", clique e selecione **"Dockerfile"**
+     - Se estiver "Nixpacks", "Railpack" ou "Auto-detect", clique e selecione **"Dockerfile"**
      - Isso é CRÍTICO - o Railway DEVE usar o Dockerfile, não Nixpacks
-  3. **Em "Dockerfile Path"**, deixe **VAZIO**
-  4. **Salve as configurações**
-  5. **Limpe o cache** (Settings → Deploy → Clear Cache)
-  6. **Force um novo deploy** (Deployments → Redeploy)
+  3. **Em "Dockerfile Path"**, deixe **VAZIO** (não digite nada)
+     - Com Root Directory = `Back`, o Railway encontra o Dockerfile automaticamente
+  4. **Verifique o Root Directory**:
+     - Vá em **Settings → Source**
+     - Certifique-se de que **Root Directory** está como `Back` (sem barra no final)
+  5. **Salve as configurações**
+  6. **Limpe o cache** (Settings → Deploy → Clear Cache, se disponível)
+  7. **Force um novo deploy**:
+     - Vá em **Deployments**
+     - Clique nos três pontos do último deploy → **"Redeploy"**
+     - Ou delete o último deploy e crie um novo
+  
+  **Nota**: O arquivo `railway.json` ajuda, mas o Railway pode não detectá-lo automaticamente. Configure manualmente para garantir.
 
 ### Erro: "Dockerfile `Dockerfile` does not exist"
 - **Causa**: O Railway não está encontrando o Dockerfile mesmo com Root Directory configurado
