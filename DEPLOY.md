@@ -15,15 +15,22 @@ Este guia explica como fazer deploy da aplicação Fortnite Cosmetics Store em s
 ### 📦 Estrutura de Deploy
 
 - **Frontend**: Vercel (gratuito) - Root Directory: `Font/FortniteFront`
-- **Backend**: Railway ou Render (gratuito) - Root Directory: `Back`
+- **Backend**: Railway (gratuito) - Root Directory: `Back`
 
 ## 🎨 Deploy do Frontend (Vercel)
 
-### Opção 1: Via Interface Web (Recomendado)
+### Passo 1: Preparar o Frontend
+
+O frontend já está configurado para usar variáveis de ambiente. Você precisará configurar a URL do backend após fazer o deploy.
+
+### Passo 2: Deploy no Vercel
 
 1. **Acesse [Vercel](https://vercel.com)** e faça login com GitHub
+
 2. **Clique em "Add New Project"**
+
 3. **Importe o repositório** do GitHub (o mesmo repositório que contém frontend e backend)
+
 4. **Configure o projeto:**
    - ⚠️ **IMPORTANTE**: Clique em "Configure Project" antes de fazer deploy
    - **Root Directory**: `Font/FortniteFront` ← Configure isso!
@@ -32,46 +39,40 @@ Este guia explica como fazer deploy da aplicação Fortnite Cosmetics Store em s
    - **Output Directory**: `dist` (já vem preenchido)
    - **Install Command**: `npm install` (já vem preenchido)
 
-5. **Adicione variáveis de ambiente:**
-   - `VITE_API_BASE_URL`: URL do backend (será configurada após deploy do backend)
-     - Exemplo: `https://seu-backend.railway.app/api` ou `https://seu-backend.onrender.com/api`
+5. **NÃO adicione variáveis de ambiente ainda** (faremos isso após o deploy do backend)
 
 6. **Clique em "Deploy"**
 
-### Opção 2: Via CLI
+7. **Aguarde o deploy completar** e copie a URL gerada (ex: `https://seu-projeto.vercel.app`)
 
-```bash
-# Instalar Vercel CLI
-npm i -g vercel
+### Passo 3: Configurar Variável de Ambiente (Após Deploy do Backend)
 
-# Navegar para a pasta do frontend
-cd Font/FortniteFront
+Após fazer o deploy do backend no Railway e obter a URL, volte ao Vercel:
 
-# Fazer login
-vercel login
-
-# Deploy (o Vercel detectará automaticamente o vercel.json)
-vercel
-
-# Adicionar variável de ambiente
-vercel env add VITE_API_BASE_URL
-# Digite a URL do backend quando solicitado
-```
-
-### Configuração Pós-Deploy
-
-Após o deploy do backend, atualize a variável de ambiente `VITE_API_BASE_URL` no Vercel:
 1. Vá em **Settings** → **Environment Variables**
-2. Edite `VITE_API_BASE_URL` com a URL do backend
-3. Faça um novo deploy (ou aguarde o redeploy automático)
+2. Clique em **"Add New"**
+3. Adicione:
+   - **Name**: `VITE_API_BASE_URL`
+   - **Value**: URL do backend do Railway + `/api`
+     - Exemplo: `https://seu-backend.railway.app/api`
+4. Selecione **"Production"**, **"Preview"** e **"Development"**
+5. Clique em **"Save"**
+6. Vá em **Deployments** → Clique nos três pontos do último deploy → **"Redeploy"**
 
-## 🔧 Deploy do Backend
+## 🔧 Deploy do Backend (Railway)
 
-### Opção 1: Railway (Recomendado)
+### Passo 1: Preparar o Backend
+
+O backend já está configurado. Você só precisa garantir que o CORS aceite a URL do Vercel.
+
+### Passo 2: Deploy no Railway
 
 1. **Acesse [Railway](https://railway.app)** e faça login com GitHub
+
 2. **Clique em "New Project"** → **"Deploy from GitHub repo"**
+
 3. **Selecione o repositório** e a branch (o mesmo repositório do frontend)
+
 4. **⚠️ CONFIGURE O ROOT DIRECTORY ANTES DE QUALQUER COISA:**
    - Após selecionar o repositório, **NÃO clique em Deploy ainda**
    - Clique em **"Settings"** (ou "Configure")
@@ -81,19 +82,15 @@ Após o deploy do backend, atualize a variável de ambiente `VITE_API_BASE_URL` 
 
 5. **Escolha o método de build:**
 
-   **Opção A: Usar Dockerfile (Recomendado - mais confiável)**
-   - Vá em **Settings** → **Service Source**
-   - Selecione **"Dockerfile"**
-   - ⚠️ **IMPORTANTE**: Certifique-se de que o **Root Directory** está configurado como `Back`
-   - O Railway usará o `Dockerfile` que está na pasta `Back`
-   - O contexto de build será a pasta `Back`, então o Dockerfile encontrará o `Backend.csproj`
-   
-   **Opção B: Usar Nixpacks (detecção automática)**
+   **Opção A: Usar Nixpacks (Recomendado - detecção automática)**
    - Vá em **Settings** → **Service Source**
    - Selecione **"Nixpacks"**
    - ⚠️ **IMPORTANTE**: Certifique-se de que o **Root Directory** está configurado como `Back`
    - O Railway deve detectar automaticamente o projeto .NET
-   - Se não detectar, use a Opção A (Dockerfile)
+   
+   **Opção B: Usar Dockerfile (se tiver problemas com Nixpacks)**
+   - Você precisaria criar um Dockerfile na pasta `Back`
+   - Mas como removemos Docker, use a Opção A
 
 6. **Adicione variáveis de ambiente:**
    - Vá em **Variables**
@@ -107,89 +104,89 @@ Após o deploy do backend, atualize a variável de ambiente `VITE_API_BASE_URL` 
    - Aguarde o build completar
    - Copie a URL gerada (ex: `https://seu-projeto.railway.app`)
 
-### Opção 2: Render
+### Passo 3: Configurar CORS no Backend
 
-1. **Acesse [Render](https://render.com)** e faça login com GitHub
-2. **Clique em "New +"** → **"Web Service"**
-3. **Conecte o repositório** do GitHub (o mesmo repositório do frontend)
-4. **Configure o serviço:**
-   - **Name**: `fortnite-backend`
-   - ⚠️ **Root Directory**: `Back` ← Configure isso!
-   - **Environment**: `Docker` ou `.NET`
-   - **Build Command**: `dotnet publish -c Release -o ./publish`
-   - **Start Command**: `dotnet ./publish/Backend.dll`
-   - **Plan**: Free
+Após obter a URL do Vercel, você precisa atualizar o CORS no backend:
 
-5. **Adicione variáveis de ambiente:**
-   - `ASPNETCORE_ENVIRONMENT`: `Production`
-   - `ASPNETCORE_URLS`: `http://+:10000`
-
-6. **Clique em "Create Web Service"**
-
-### Opção 3: Fly.io
-
-1. **Instale o Fly CLI:**
-```bash
-# Windows (PowerShell)
-iwr https://fly.io/install.ps1 -useb | iex
-
-# Mac/Linux
-curl -L https://fly.io/install.sh | sh
-```
-
-2. **Faça login:**
-```bash
-fly auth login
-```
-
-3. **Navegue para a pasta do backend:**
-```bash
-cd Back
-```
-
-4. **Inicialize o projeto:**
-```bash
-fly launch
-```
-
-5. **Configure o `fly.toml`** (será criado automaticamente)
-
-6. **Deploy:**
-```bash
-fly deploy
-```
-
-## 🔗 Configuração de CORS
-
-O backend já está configurado para aceitar qualquer origem em produção automaticamente. Se quiser restringir a origens específicas:
-
-1. **No Railway/Render**, adicione a variável de ambiente:
-   - `FRONTEND_URL`: URL do seu frontend no Vercel
+1. **No Railway**, vá em **Variables**
+2. Adicione:
+   - **Name**: `FRONTEND_URL`
+   - **Value**: URL do seu frontend no Vercel
      - Exemplo: `https://seu-projeto.vercel.app`
+3. **Atualize o `Back/Program.cs`** para usar essa variável:
 
-2. **O `Program.cs`** já está configurado para usar essa variável automaticamente
+```csharp
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        var allowedOrigins = new List<string>
+        {
+            "http://localhost:5173",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://localhost:3000"
+        };
+        
+        // Adicionar origem do Vercel se estiver configurada
+        var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
+        if (!string.IsNullOrEmpty(frontendUrl))
+        {
+            allowedOrigins.Add(frontendUrl);
+        }
+        
+        policy.WithOrigins(allowedOrigins.ToArray())
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials()
+              .WithExposedHeaders("X-User-Id");
+    });
+});
+```
+
+4. **Faça commit e push** para o GitHub
+5. **Railway fará deploy automático** com as novas configurações
+
+## 🔗 Ordem de Deploy Recomendada
+
+1. **Primeiro**: Deploy do Backend no Railway
+   - Obtenha a URL do backend
+   - Exemplo: `https://seu-backend.railway.app`
+
+2. **Segundo**: Deploy do Frontend no Vercel
+   - Configure a variável `VITE_API_BASE_URL` com a URL do backend
+   - Exemplo: `https://seu-backend.railway.app/api`
+
+3. **Terceiro**: Atualizar CORS no Backend
+   - Adicione a URL do Vercel nas variáveis de ambiente do Railway
+   - Atualize o código se necessário
+   - Faça redeploy
 
 ## 📝 Checklist de Deploy
+
+### Backend (Railway)
+- [ ] Repositório conectado ao Railway (mesmo repositório do frontend)
+- [ ] ⚠️ **Root Directory configurado**: `Back` (muito importante!)
+- [ ] Build e Start commands configurados automaticamente
+- [ ] Variáveis de ambiente configuradas:
+  - [ ] `ASPNETCORE_ENVIRONMENT`: `Production`
+  - [ ] `ASPNETCORE_URLS`: `http://+:${PORT}`
+- [ ] Deploy realizado com sucesso
+- [ ] API acessível via URL do Railway
+- [ ] URL do backend copiada (ex: `https://seu-backend.railway.app`)
 
 ### Frontend (Vercel)
 - [ ] Repositório conectado ao Vercel (mesmo repositório do backend)
 - [ ] ⚠️ **Root Directory configurado**: `Font/FortniteFront` (muito importante!)
 - [ ] Variável `VITE_API_BASE_URL` configurada com URL do backend
+  - Formato: `https://seu-backend.railway.app/api`
 - [ ] Deploy realizado com sucesso
 - [ ] Aplicação acessível via URL do Vercel
-
-### Backend (Railway/Render)
-- [ ] Repositório conectado (mesmo repositório do frontend)
-- [ ] ⚠️ **Root Directory configurado**: `Back` (muito importante!)
-- [ ] Build e Start commands configurados
-- [ ] Variáveis de ambiente configuradas
-- [ ] Deploy realizado com sucesso
-- [ ] API acessível via URL do serviço
-- [ ] Swagger acessível (se habilitado)
+- [ ] URL do frontend copiada (ex: `https://seu-projeto.vercel.app`)
 
 ### Integração
 - [ ] Frontend configurado para usar URL do backend
-- [ ] CORS configurado no backend
+- [ ] CORS configurado no backend para aceitar URL do Vercel
 - [ ] Testes de login/registro funcionando
 - [ ] Testes de compra/devolução funcionando
 
@@ -197,74 +194,33 @@ O backend já está configurado para aceitar qualquer origem em produção autom
 
 ### Erro de CORS
 - Verifique se a URL do frontend está nas origens permitidas do backend
-- Em produção, o backend está configurado para aceitar qualquer origem
+- Certifique-se de que a variável `FRONTEND_URL` está configurada no Railway
+- Verifique se o código do CORS foi atualizado para usar a variável de ambiente
 
 ### Erro 404 no Frontend
-- Verifique se o `vercel.json` está configurado corretamente
+- Verifique se o `vercel.json` está configurado corretamente (se existir)
 - Certifique-se de que o build está gerando a pasta `dist`
 
-### Backend não inicia
-- Verifique os logs no Railway/Render
+### Backend não inicia no Railway
+- Verifique os logs no Railway
 - Certifique-se de que a porta está configurada corretamente
 - Verifique se o banco de dados SQLite está sendo criado
+- Verifique se o Root Directory está configurado como `Back`
+
+### Erro Railway: "Railpack could not determine how to build the app"
+- ⚠️ **Verifique o Root Directory!** Deve estar configurado como `Back`
+- No Railway: Settings → Root Directory → `Back`
+- Se ainda não funcionar, delete o serviço e crie novamente, configurando o Root Directory ANTES do primeiro deploy
 
 ### Variáveis de ambiente não funcionam
 - No Vercel: Settings → Environment Variables → Redeploy
 - No Railway: Variables → Redeploy
-- No Render: Environment → Save Changes → Manual Deploy
+- Certifique-se de que as variáveis estão configuradas para o ambiente correto (Production/Preview/Development)
 
 ### Erro: "Cannot find project file"
 - ⚠️ **Verifique o Root Directory!** Deve ser `Back` para backend e `Font/FortniteFront` para frontend
 - No Vercel: Settings → General → Root Directory
 - No Railway: Settings → Root Directory
-- No Render: Settings → Root Directory
-
-### Erro Railway: "Railpack could not determine how to build the app"
-
-Este erro acontece quando o Railway não encontra o arquivo `Backend.csproj` porque está analisando a raiz do repositório.
-
-**Solução (PASSO A PASSO):**
-
-1. **Configure o Root Directory PRIMEIRO:**
-   - No Railway, vá em **Settings** → **Root Directory**
-   - Digite: `Back`
-   - Salve
-
-2. **Escolha o método de build:**
-   - Vá em **Settings** → **Service Source**
-   - Selecione **"Dockerfile"** (mais confiável)
-   - Ou selecione **"Nixpacks"** se preferir detecção automática
-
-3. **Se ainda não funcionar:**
-   - Delete o serviço e crie novamente
-   - Desta vez, configure o Root Directory **ANTES** de fazer o primeiro deploy
-   - Use o Dockerfile como método de build
-
-4. **Verifique se os arquivos estão corretos:**
-   - O arquivo `Backend.csproj` deve estar em `Back/Backend.csproj`
-   - O arquivo `Dockerfile` deve estar em `Back/Dockerfile`
-   - O arquivo `Program.cs` deve estar em `Back/Program.cs`
-
-### Erro Docker: "/Backend.csproj": not found
-
-Este erro acontece quando o contexto de build do Docker não está na pasta `Back`.
-
-**Solução:**
-
-1. **Verifique o Root Directory:**
-   - No Railway, vá em **Settings** → **Root Directory**
-   - Deve estar configurado como: `Back`
-   - Se não estiver, configure e salve
-
-2. **Reinicie o build:**
-   - Após configurar o Root Directory, o Railway deve fazer um novo build automaticamente
-   - Ou clique em **"Redeploy"** manualmente
-
-3. **Se ainda não funcionar:**
-   - Delete o serviço completamente
-   - Crie um novo serviço
-   - **Configure o Root Directory como `Back` ANTES de fazer qualquer deploy**
-   - Depois selecione o Dockerfile como método de build
 
 ## 🔄 Atualizações
 
@@ -272,17 +228,17 @@ Para atualizar a aplicação após mudanças:
 
 1. **Faça commit e push** para o GitHub
 2. **Vercel**: Deploy automático (ou manual via dashboard)
-3. **Railway/Render**: Deploy automático (ou manual via dashboard)
+3. **Railway**: Deploy automático (ou manual via dashboard)
 
 ## 📚 Links Úteis
 
 - [Documentação Vercel](https://vercel.com/docs)
 - [Documentação Railway](https://docs.railway.app)
-- [Documentação Render](https://render.com/docs)
-- [Documentação Fly.io](https://fly.io/docs)
+- [Guia de Root Directory no Vercel](https://vercel.com/docs/projects/configuration#root-directory)
+- [Guia de Root Directory no Railway](https://docs.railway.app/develop/variables#root-directory)
 
 ## 💡 Dica Final
 
 **Use o mesmo repositório!** É mais simples e prático. Apenas certifique-se de configurar o **Root Directory** corretamente em cada serviço:
 - Vercel: `Font/FortniteFront`
-- Railway/Render: `Back`
+- Railway: `Back`

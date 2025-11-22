@@ -1,28 +1,10 @@
 import axios from 'axios';
 
-// Helper para obter a URL base da API
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) {
-    // Se for relativa (começa com /), usar como está
-    if (envUrl.startsWith('/')) {
-      return envUrl;
-    }
-    // Se for absoluta, usar diretamente
-    return envUrl;
-  }
-  // Fallback para desenvolvimento local
-  return 'http://localhost:5155/api';
-};
-
-const API_BASE_URL = getApiBaseUrl();
-// Se for URL relativa, adicionar o endpoint completo
-const COSMETICS_ENDPOINT = API_BASE_URL.startsWith('/') 
-  ? `${API_BASE_URL}/ControllerCosmeticsEnriched`
-  : `${API_BASE_URL}/ControllerCosmeticsEnriched`;
+// Usar variável de ambiente se disponível, senão usar localhost
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5155/api/ControllerCosmeticsEnriched';
 
 const api = axios.create({
-  baseURL: COSMETICS_ENDPOINT,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -371,7 +353,7 @@ export const cosmeticsAPI = {
   // Devolver cosmético
   refundCosmetic: async (cosmeticId, cosmeticName, userId) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/transactions/refund/${cosmeticId}`, {
+      const response = await axios.post(`http://localhost:5155/api/transactions/refund/${cosmeticId}`, {
         cosmeticName: cosmeticName || cosmeticId
       }, {
         headers: userId ? { 'X-User-Id': userId } : {}
@@ -386,7 +368,7 @@ export const cosmeticsAPI = {
   // Comprar bundle
   purchaseBundle: async (cosmetics, userId) => {
     try {
-      const response = await axios.post(`${API_BASE_URL}/bundles/purchase`, {
+      const response = await axios.post('http://localhost:5155/api/bundles/purchase', {
         cosmetics: cosmetics
       }, {
         headers: {

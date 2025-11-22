@@ -134,6 +134,15 @@ C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsof
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Swashbuckle.AspNetCore.Swagger.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerGen.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Swashbuckle.AspNetCore.SwaggerUI.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.Data.Sqlite.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Abstractions.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Relational.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Sqlite.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\SQLitePCLRaw.batteries_v2.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\SQLitePCLRaw.core.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\SQLitePCLRaw.provider.e_sqlite3.dll
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\runtimes\win-x64\native\e_sqlite3.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\appsettings.Development.json
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\appsettings.json
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\net8.0\appsettings.Development.json
@@ -146,17 +155,9 @@ C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsof
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.CodeAnalysis.CSharp.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.CodeAnalysis.CSharp.Workspaces.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.CodeAnalysis.Workspaces.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.Data.Sqlite.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Abstractions.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Design.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Relational.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Sqlite.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Microsoft.Extensions.DependencyModel.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Mono.TextTemplating.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\SQLitePCLRaw.batteries_v2.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\SQLitePCLRaw.core.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\SQLitePCLRaw.provider.e_sqlite3.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\System.CodeDom.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\System.Composition.AttributedModel.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\System.Composition.Convention.dll
@@ -233,7 +234,6 @@ C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\runtimes
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\runtimes\osx-x64\native\libe_sqlite3.dylib
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\runtimes\win-arm\native\e_sqlite3.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\runtimes\win-arm64\native\e_sqlite3.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\runtimes\win-x64\native\e_sqlite3.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\runtimes\win-x86\native\e_sqlite3.dll
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.csproj.AssemblyReference.cache
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.GeneratedMSBuildEditorConfig.editorconfig
@@ -242,6 +242,7 @@ C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.csproj.CoreCompileInputs.cache
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.sourcelink.json
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\staticwebassets.development.json
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\staticwebassets\msbuild.Backend.Microsoft.AspNetCore.StaticWebAssets.props
@@ -259,5 +260,3 @@ C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Backend.
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\Backend.pdb
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.genruntimeconfig.cache
 C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\ref\Backend.dll
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\bin\Debug\net8.0\railway.json
-C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Back\obj\Debug\net8.0\Backend.sourcelink.json
