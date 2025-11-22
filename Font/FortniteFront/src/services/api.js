@@ -353,7 +353,8 @@ export const cosmeticsAPI = {
   // Devolver cosmético
   refundCosmetic: async (cosmeticId, cosmeticName, userId) => {
     try {
-      const response = await axios.post(`http://localhost:5155/api/transactions/refund/${cosmeticId}`, {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/ControllerCosmeticsEnriched', '') || 'http://localhost:5155/api';
+      const response = await axios.post(`${baseUrl}/transactions/refund/${cosmeticId}`, {
         cosmeticName: cosmeticName || cosmeticId
       }, {
         headers: userId ? { 'X-User-Id': userId } : {}
@@ -368,7 +369,8 @@ export const cosmeticsAPI = {
   // Comprar bundle
   purchaseBundle: async (cosmetics, userId) => {
     try {
-      const response = await axios.post('http://localhost:5155/api/bundles/purchase', {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/ControllerCosmeticsEnriched', '') || 'http://localhost:5155/api';
+      const response = await axios.post(`${baseUrl}/bundles/purchase`, {
         cosmetics: cosmetics
       }, {
         headers: {

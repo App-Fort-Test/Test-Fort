@@ -861,26 +861,26 @@ export function useCosmetics() {
     }
   };
 
-      // Carregar V-Bucks
-      const loadVBucks = async () => {
+  // Carregar V-Bucks
+  const loadVBucks = async () => {
         if (!user.value) {
           vbucks.value = 0;
           return;
         }
-        try {
+    try {
           const data = await cosmeticsAPI.getVBucks(user.value.id);
-          vbucks.value = data.vbucks || data || 0;
-        } catch (err) {
+      vbucks.value = data.vbucks || data || 0;
+    } catch (err) {
           // Se for 401, apenas não atualizar (usuário não logado)
           if (err.response?.status === 401) {
             console.log('Usuário não autenticado, V-Bucks não disponíveis');
             vbucks.value = 0;
             return;
           }
-          console.error('Error loading V-Bucks:', err);
+      console.error('Error loading V-Bucks:', err);
           vbucks.value = 0;
-        }
-      };
+    }
+  };
 
   // Comprar cosmético
   const purchaseCosmetic = async (cosmeticId, price, cosmeticName) => {
@@ -948,7 +948,7 @@ export function useCosmetics() {
       } else {
         // Se não retornou, buscar do servidor (forçar refresh)
         console.log('V-bucks não retornado na resposta, buscando do servidor...');
-        await loadVBucks();
+      await loadVBucks();
         const { useAuth } = await import('./useAuth');
         const { updateVBucks } = useAuth();
         if (vbucks.value !== undefined && vbucks.value !== null) {

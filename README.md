@@ -2,6 +2,14 @@
 
 Sistema de loja de cosméticos do Fortnite com gerenciamento de usuários, transações e inventário.
 
+## 🌐 Deploy Online
+
+A aplicação pode ser implantada gratuitamente:
+- **Frontend**: [Vercel](https://vercel.com) (gratuito)
+- **Backend**: [Railway](https://railway.app) (gratuito)
+
+📖 **Veja o guia completo de deploy em [DEPLOY.md](./DEPLOY.md)**
+
 ## 📋 Instruções para Rodar o Projeto Localmente
 
 ### Pré-requisitos
