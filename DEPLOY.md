@@ -298,6 +298,17 @@ builder.Services.AddCors(options =>
      - Deve usar `.NET 8.0` (não `.NET 6.0`)
      - Deve copiar `Backend.csproj` primeiro, depois fazer `dotnet restore`
 
+### Erro 405 (Method Not Allowed) ao fazer registro/login
+- **Causa**: Problema com roteamento ou ordem do middleware no backend
+- **Solução**:
+  1. **Verifique se o código do backend está atualizado** com `UseRouting()` e `UseAuthorization()`
+  2. **Verifique a URL no frontend**: deve ser `https://sua-url-railway.app/api/auth/register`
+  3. **Verifique a variável de ambiente no Vercel**:
+     - Deve ser: `https://sua-url-railway.app/api` (com `/api` no final)
+     - NÃO deve ser: `https://sua-url-railway.app` (sem `/api`)
+  4. **Faça commit e push** das alterações do backend
+  5. **Force um redeploy** no Railway
+
 ### Erro de CORS
 - Verifique se a URL do frontend está nas origens permitidas do backend
 - Certifique-se de que a variável `FRONTEND_URL` está configurada no Railway
