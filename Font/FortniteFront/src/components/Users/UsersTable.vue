@@ -118,7 +118,7 @@
       </div>
       
       <div v-else-if="users.length === 0" class="no-users-mobile">
-        <p>Nenhum item encontrado com os filtros aplicados.</p>
+        <p>Nenhum usuário encontrado.</p>
       </div>
       
       <div 

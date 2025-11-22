@@ -692,22 +692,238 @@ const confirmRefund = async () => {
   opacity: 0.6 !important;
 }
 
+/* Tablet */
+@media (max-width: 1024px) {
+  .cosmetic-details-modal {
+    max-width: 95%;
+    padding: 12px;
+  }
+
+  .details-image {
+    width: 180px;
+    height: 180px;
+  }
+
+  .cosmetic-name {
+    font-size: 1.75rem;
+  }
+
+  .info-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+}
+
+/* Mobile */
 @media (max-width: 768px) {
+  .cosmetic-details-modal {
+    max-width: 100%;
+    max-height: 95vh;
+    padding: 8px;
+  }
+
+  .details-content {
+    gap: 16px;
+    padding: 4px;
+  }
+
   .details-header {
     flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+    padding-bottom: 16px;
+  }
+
+  .details-image-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 
   .details-image {
     width: 150px;
     height: 150px;
+    max-width: 100%;
+  }
+
+  .details-title {
+    width: 100%;
+  }
+
+  .cosmetic-name {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+  }
+
+  .cosmetic-id {
+    font-size: 0.8rem;
+  }
+
+  .details-section {
+    gap: 12px;
+  }
+
+  .section-title {
+    font-size: 1.1rem;
+    padding-bottom: 6px;
   }
 
   .info-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .info-item {
+    gap: 2px;
+  }
+
+  .info-label {
+    font-size: 0.85rem;
+  }
+
+  .info-value {
+    font-size: 1rem;
+  }
+
+  .price-display {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .vbucks-icon-large {
+    width: 40px;
+    height: 40px;
+  }
+
+  .price-values {
+    gap: 2px;
+  }
+
+  .original-price-large {
+    font-size: 1rem;
+  }
+
+  .current-price-large {
+    font-size: 1.5rem;
+  }
+
+  .discount-info {
+    font-size: 0.9rem;
+  }
+
+  .bundle-item {
+    padding: 10px 12px;
+  }
+
+  .bundle-item-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .bundle-total {
+    font-size: 1rem;
+    margin-top: 6px;
+    padding-top: 8px;
+  }
+
+  .images-gallery {
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .gallery-image {
+    width: 120px;
+    height: 120px;
+    max-width: calc(50% - 6px);
   }
 
   .details-actions {
     flex-direction: column;
+    gap: 12px;
+    margin-top: 16px;
+    padding-top: 16px;
+  }
+
+  .action-button {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 0.95rem;
+  }
+
+  .image-badges {
+    top: 4px;
+    right: 4px;
+    gap: 3px;
+  }
+
+  .badge {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
+
+  .status-tag {
+    padding: 3px 10px;
+    font-size: 0.8rem;
+    margin-right: 6px;
+    margin-bottom: 4px;
+  }
+}
+
+/* Mobile pequeno */
+@media (max-width: 480px) {
+  .cosmetic-details-modal {
+    padding: 4px;
+  }
+
+  .details-content {
+    gap: 12px;
+  }
+
+  .details-image {
+    width: 120px;
+    height: 120px;
+  }
+
+  .cosmetic-name {
+    font-size: 1.25rem;
+  }
+
+  .cosmetic-id {
+    font-size: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  .info-label {
+    font-size: 0.8rem;
+  }
+
+  .info-value {
+    font-size: 0.9rem;
+  }
+
+  .vbucks-icon-large {
+    width: 36px;
+    height: 36px;
+  }
+
+  .current-price-large {
+    font-size: 1.25rem;
+  }
+
+  .gallery-image {
+    width: 100px;
+    height: 100px;
+    max-width: calc(50% - 6px);
+  }
+
+  .action-button {
+    padding: 12px 16px;
+    font-size: 0.9rem;
   }
 }
 </style>
