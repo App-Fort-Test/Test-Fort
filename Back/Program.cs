@@ -281,6 +281,9 @@ app.UseRouting();
 
 app.UseCors();
 
+app.MapMethods("{*path}", new[] { "OPTIONS" }, () => Results.Ok())
+   .WithName("Preflight");
+
 app.UseAuthentication();
 
 app.Use(async (context, next) =>
@@ -341,6 +344,9 @@ app.Use(async (context, next) =>
         }
     }
 });
+
+
+
 
 app.UseAuthorization();
 
