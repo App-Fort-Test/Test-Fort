@@ -2,7 +2,7 @@
   <div class="users-table-container">
     <div class="table-header">
       <h2 class="table-title">Lista de Usuários</h2>
-      <div v-if="loading" class="loading">Carregando...</div>
+      <div v-if="loading" class="loading">Aguarde o carregamento</div>
     </div>
     
     <div v-if="totalPages > 1" class="pagination-controls">
@@ -31,7 +31,7 @@
         <tbody>
           <tr v-if="users.length === 0 && !loading" class="no-users-row">
             <td colspan="6" class="no-users-message">
-              Nenhum usuário encontrado.
+              Nenhum item encontrado com os filtros aplicados.
             </td>
           </tr>
           <template v-for="user in users" :key="user.id">
@@ -113,6 +113,14 @@
     </div>
 
     <div class="mobile-view">
+      <div v-if="loading" class="loading-mobile">
+        <p>Aguarde o carregamento</p>
+      </div>
+      
+      <div v-else-if="users.length === 0" class="no-users-mobile">
+        <p>Nenhum item encontrado com os filtros aplicados.</p>
+      </div>
+      
       <div 
         v-for="user in users" 
         :key="user.id"
@@ -1504,5 +1512,19 @@ const getFundoImage = (rarity) => {
   .item-image-container {
     height: 180px;
   }
+}
+
+.loading-mobile {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+  font-style: italic;
+}
+
+.no-users-mobile {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+  font-style: italic;
 }
 </style>

@@ -154,6 +154,17 @@
       </div>
     </div>
   </div>
+  
+  <ConfirmDialog
+    :is-visible="showConfirmRefund"
+    title="Confirmar Devolução"
+    :message="refundMessage"
+    confirm-text="Devolver"
+    cancel-text="Cancelar"
+    @confirm="confirmRefund"
+    @cancel="showConfirmRefund = false"
+    @update:is-visible="showConfirmRefund = $event"
+  />
 </template>
 
 <script setup>
@@ -161,6 +172,8 @@ import { computed, ref } from 'vue';
 import logoMoeda from '../../../assets/svg/logomoeda.svg';
 import { useCosmetics } from '../../../composables/useCosmetics';
 import { useAuth } from '../../../composables/useAuth';
+import { useToast } from '../../../composables/useToast';
+import ConfirmDialog from '../ConfirmDialog.vue';
 
 const props = defineProps({
   cosmetic: {
@@ -172,6 +185,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'purchase-success', 'refund-success']);
 
 const { purchaseCosmetic, refundCosmetic, loadVBucks, searchCosmetics, error: cosmeticError } = useCosmetics();
+const toast = useToast();
 const { user, updateVBucks } = useAuth();
 
 const isPurchasing = ref(false);
@@ -274,59 +288,65 @@ const handlePurchase = async () => {
     if (success) {
       await loadVBucks();
       await searchCosmetics();
-      alert('Cosmético adquirido com sucesso!');
+      toast.success('Cosmético adquirido com sucesso!');
       emit('purchase-success');
     } else {
-      alert(cosmeticError.value || 'Erro ao comprar cosmético');
+      toast.error(cosmeticError.value || 'Erro ao comprar cosmético');
     }
   } catch (err) {
     console.error('Erro ao comprar cosmético:', err);
-    alert(err.response?.data?.message || 'Erro ao comprar cosmético');
+    toast.error(err.response?.data?.message || 'Erro ao comprar cosmético');
   } finally {
     isPurchasing.value = false;
   }
 };
 
+const showConfirmRefund = ref(false);
+
+const refundMessage = computed(() => {
+  if (!props.cosmetic?.name) return '';
+  return `Tem certeza que deseja devolver "${props.cosmetic.name}"? Você receberá o valor pago em v-bucks.`;
+});
+
 const handleRefund = async () => {
   if (!user.value) {
-    alert('É necessário estar logado para devolver cosméticos');
+    toast.warning('É necessário estar logado para devolver cosméticos');
     return;
   }
 
   if (!props.cosmetic) return;
 
-  if (!confirm(`Tem certeza que deseja devolver "${props.cosmetic.name}"? Você receberá o valor pago em v-bucks.`)) {
-    return;
-  }
+  showConfirmRefund.value = true;
+};
 
+const confirmRefund = async () => {
+  if (!props.cosmetic) return;
+  
   isRefunding.value = true;
   try {
     const success = await refundCosmetic(props.cosmetic.id, props.cosmetic.name);
     if (success) {
-      // O refundCosmetic já atualiza os V-Bucks e a wallet, mas garantimos aqui também
       await loadVBucks();
-      // Atualizar wallet no header (o refundCosmetic já faz isso, mas garantimos aqui)
       const { cosmeticsAPI } = await import('../../../services/api');
       try {
         if (user.value) {
           const data = await cosmeticsAPI.getVBucks(user.value.id);
           if (data.vbucks !== undefined) {
             updateVBucks(data.vbucks);
-            console.log('Wallet atualizada no modal após devolução:', data.vbucks);
           }
         }
       } catch (e) {
         console.warn('Erro ao atualizar wallet no modal:', e);
       }
       await searchCosmetics();
-      alert('Cosmético devolvido com sucesso!');
+      toast.success('Cosmético devolvido com sucesso!');
       emit('refund-success');
     } else {
-      alert(cosmeticError.value || 'Erro ao devolver cosmético');
+      toast.error(cosmeticError.value || 'Erro ao devolver cosmético');
     }
   } catch (err) {
     console.error('Erro ao devolver cosmético:', err);
-    alert(err.response?.data?.message || 'Erro ao devolver cosmético');
+    toast.error(err.response?.data?.message || 'Erro ao devolver cosmético');
   } finally {
     isRefunding.value = false;
   }

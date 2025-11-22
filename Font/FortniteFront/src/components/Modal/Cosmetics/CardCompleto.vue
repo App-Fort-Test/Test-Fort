@@ -1,11 +1,13 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import Card from './Card.vue';
 import PaginationMaster from '../../Pagination/PaginationMaster.vue';
 import CosmeticDetailsModal from './CosmeticDetailsModal.vue';
 import BaseModal from '../User/BaseModal.vue';
 import { useCosmetics } from '../../../composables/useCosmetics';
 import { useAuth } from '../../../composables/useAuth';
+import { useToast } from '../../../composables/useToast';
+import ConfirmDialog from '../ConfirmDialog.vue';
 
 const { 
     cosmetics, 
@@ -166,7 +168,7 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
         const { user } = useAuth();
         
         if (!user.value) {
-            alert('É necessário estar logado para comprar bundles');
+            toast.warning('É necessário estar logado para comprar bundles');
             return;
         }
         
@@ -190,13 +192,13 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
                 if (result.vbucks !== undefined) {
                     updateVBucks(result.vbucks);
                 }
-                alert('Bundle adquirido com sucesso!');
+                toast.success('Bundle adquirido com sucesso!');
             } else {
-                alert(result.message || 'Erro ao comprar bundle');
+                toast.error(result.message || 'Erro ao comprar bundle');
             }
         } catch (error) {
             console.error('Erro ao comprar bundle:', error);
-            alert(error.response?.data?.message || 'Erro ao comprar bundle');
+            toast.error(error.response?.data?.message || 'Erro ao comprar bundle');
         } finally {
             isPurchasing.value = false;
             purchasingId.value = null;
@@ -217,24 +219,36 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
                 console.warn('Erro ao disparar evento de atualização:', e);
             }
             
-            alert('Item adquirido com sucesso!');
+            toast.success('Item adquirido com sucesso!');
         } else {
-            alert('Erro ao comprar o item. Verifique se você tem V-bucks suficientes.');
+            toast.error('Erro ao comprar o item. Verifique se você tem V-bucks suficientes.');
         }
     } catch (err) {
         console.error('Erro ao comprar cosmético:', err);
         const errorMessage = err.response?.data?.message || err.message || 'Erro ao comprar cosmético';
-        alert(errorMessage);
+        toast.error(errorMessage);
     } finally {
         isPurchasing.value = false;
         purchasingId.value = null;
     }
 };
 
+const showConfirmRefund = ref(false);
+const refundToConfirm = ref({ id: null, name: null });
+
+const refundMessage = computed(() => {
+    if (!refundToConfirm.value.name) return '';
+    return `Tem certeza que deseja devolver "${refundToConfirm.value.name}"? Você receberá o valor pago em v-bucks.`;
+});
+
 const handleRefund = async (cosmeticId, cosmeticName) => {
-    if (!confirm(`Tem certeza que deseja devolver "${cosmeticName}"? Você receberá o valor pago em v-bucks.`)) {
-        return;
-    }
+    refundToConfirm.value = { id: cosmeticId, name: cosmeticName };
+    showConfirmRefund.value = true;
+};
+
+const confirmRefund = async () => {
+    const { id: cosmeticId, name: cosmeticName } = refundToConfirm.value;
+    if (!cosmeticId) return;
     
     isRefunding.value = true;
     refundingId.value = cosmeticId;
@@ -250,16 +264,17 @@ const handleRefund = async (cosmeticId, cosmeticName) => {
                 console.warn('Erro ao disparar evento de atualização:', e);
             }
             
-            alert('Cosmético devolvido com sucesso!');
+            toast.success('Cosmético devolvido com sucesso!');
         } else {
-            alert(error.value || 'Erro ao devolver cosmético');
+            toast.error(error.value || 'Erro ao devolver cosmético');
         }
     } catch (err) {
         console.error('Erro ao devolver cosmético:', err);
-        alert(err.response?.data?.message || 'Erro ao devolver cosmético');
+        toast.error(err.response?.data?.message || 'Erro ao devolver cosmético');
     } finally {
         isRefunding.value = false;
         refundingId.value = null;
+        refundToConfirm.value = { id: null, name: null };
     }
 };
 
@@ -310,11 +325,15 @@ const handleCloseDetails = () => {
             />
             
             <div v-if="loading" class="loading-container">
-                <p>Carregando...</p>
+                <p>Aguarde o carregamento</p>
             </div>
             
             <div v-else-if="error" class="error-container">
                 <p>Erro: {{ error }}</p>
+            </div>
+            
+            <div v-else-if="!loading && !error && cosmetics.length === 0" class="no-results">
+                <p>Nenhum item encontrado com os filtros aplicados.</p>
             </div>
             
             <div v-else class="cards-grid">
@@ -329,10 +348,6 @@ const handleCloseDetails = () => {
                     @refund="(id, name) => handleRefund(id, name)"
                     @show-details="handleShowDetails"
                 />
-            </div>
-            
-            <div v-if="!loading && !error && cosmetics.length === 0" class="no-results">
-                <p>Nenhum cosmético encontrado.</p>
             </div>
             
             <!-- Debug: mostrar informações da paginação -->
@@ -351,6 +366,17 @@ const handleCloseDetails = () => {
             />
         </BaseModal>
     </div>
+    
+    <ConfirmDialog
+        :is-visible="showConfirmRefund"
+        title="Confirmar Devolução"
+        :message="refundMessage"
+        confirm-text="Devolver"
+        cancel-text="Cancelar"
+        @confirm="confirmRefund"
+        @cancel="showConfirmRefund = false"
+        @update:is-visible="showConfirmRefund = $event"
+    />
 </template>
 
 <style scoped>

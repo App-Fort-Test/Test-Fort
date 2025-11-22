@@ -669,7 +669,7 @@ const handleImageError = (event) => {
 /* Manter TODOS os estilos existentes exatamente como estão */
 .card {
     border-radius: 10px;
-    width: 223px;
+    width: 230px;
     height: 430px;
     padding: 16px;
     transition: transform 0.2s;

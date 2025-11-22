@@ -7,6 +7,7 @@ import FilterMaster from './components/Filter/FilterMaster.vue';
 import Title from './components/Title.vue';
 import UsersTable from './components/Users/UsersTable.vue';
 import TransactionHistory from './components/Transactions/TransactionHistory.vue';
+import Toast from './components/Notification/Toast.vue';
 
 const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 const activeRoute = ref('loja');
@@ -60,6 +61,8 @@ defineExpose({ setActiveRoute });
   <div v-else-if="activeRoute === 'historico'" class="history-container">
     <TransactionHistory :key="`history-${activeRoute}`" />
   </div>
+  
+  <Toast />
 </template>
 
 <style scoped>
