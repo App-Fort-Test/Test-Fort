@@ -80,23 +80,31 @@ O backend já está configurado. Você só precisa garantir que o CORS aceite a 
    - Clique em **"Update"** para salvar
 
 5. **Configure o Builder (Build):**
-   - Na seção **"Build"**, certifique-se de que **"Dockerfile"** está selecionado
-   - Em **"Dockerfile Path"**, deixe vazio ou digite: `Back/Dockerfile`
+   - Na seção **"Build"**, certifique-se de que **"Dockerfile"** está selecionado (NÃO "Nixpacks")
+   - ⚠️ **IMPORTANTE**: Se estiver usando "Nixpacks", mude para "Dockerfile"
+   - Em **"Dockerfile Path"**, deixe vazio (o Railway encontrará automaticamente o `Dockerfile` dentro da pasta `Back`)
      - ⚠️ **Nota**: Com Root Directory = `Back`, o Railway procura o Dockerfile dentro dessa pasta automaticamente
+     - ❌ **NÃO use**: `Back/Dockerfile` (isso procuraria `Back/Back/Dockerfile`)
    - Em **"Watch Paths"**, adicione: `/Back/**` (para fazer deploy quando houver mudanças na pasta Back)
 
 6. **Configure o Deploy:**
    - Na seção **"Deploy"**, em **"Custom Start Command"**, **DEIXE VAZIO**
      - ⚠️ **Importante**: O Dockerfile já define o comando de start via `ENTRYPOINT`, não precisa configurar aqui
 
-7. **Adicione variáveis de ambiente:**
+7. **⚠️ LIMPE O CACHE DO RAILWAY (se estiver usando Dockerfile antigo):**
+   - Vá em **Settings** → **Deploy**
+   - Procure por **"Clear Build Cache"** ou **"Clear Cache"**
+   - Clique para limpar o cache
+   - Isso força o Railway a usar o Dockerfile atualizado do repositório
+
+8. **Adicione variáveis de ambiente:**
    - Vá em **Variables**
    - Adicione:
      - `ASPNETCORE_ENVIRONMENT`: `Production`
      - `ASPNETCORE_URLS`: `http://+:${PORT}` (Railway define PORT automaticamente)
      - `PORT`: Deixe Railway definir automaticamente (não precisa adicionar manualmente)
 
-8. **Agora sim, faça o deploy:**
+9. **Agora sim, faça o deploy:**
    - Clique em **"Deploy"** ou aguarde o deploy automático
    - Aguarde o build completar
    - Copie a URL gerada (ex: `https://seu-projeto.railway.app`)
@@ -188,6 +196,24 @@ builder.Services.AddCors(options =>
 - [ ] Testes de compra/devolução funcionando
 
 ## 🐛 Troubleshooting
+
+### Erro: "Dockerfile `Back/Dockerfile` does not exist"
+- **Causa**: O Dockerfile não foi commitado no Git ou o Railway não está encontrando
+- **Solução**:
+  1. Verifique se o Dockerfile existe em `Back/Dockerfile`
+  2. Faça commit e push: `git add Back/Dockerfile && git commit -m "Add Dockerfile" && git push`
+  3. No Railway, limpe o cache de build
+  4. Force um novo deploy
+
+### Erro: "MSB1003: Specify a project or solution file" ou ".NET 6.0" no build
+- **Causa**: O Railway está usando Nixpacks (geração automática) ou um Dockerfile em cache antigo
+- **Solução**:
+  1. No Railway, vá em **Settings** → **Build**
+  2. Certifique-se de que **"Dockerfile"** está selecionado (NÃO "Nixpacks")
+  3. Em **"Dockerfile Path"**, deixe vazio (não use `Back/Dockerfile`)
+  4. Limpe o cache de build
+  5. Force um novo deploy
+  6. Verifique se o Root Directory está configurado como `Back`
 
 ### Erro de CORS
 - Verifique se a URL do frontend está nas origens permitidas do backend
