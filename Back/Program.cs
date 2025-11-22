@@ -12,11 +12,11 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddControllers()
     .ConfigureApiBehaviorOptions(options =>
     {
-        // Permitir roteamento case-insensitive
+        
         options.SuppressModelStateInvalidFilter = true;
     });
 
-// Configurar roteamento case-insensitive
+
 builder.Services.Configure<RouteOptions>(options =>
 {
     options.LowercaseUrls = true;
@@ -25,7 +25,7 @@ builder.Services.Configure<RouteOptions>(options =>
 
 builder.Services.AddHttpClient(); 
 
-// Função auxiliar para verificar permissão de escrita (definida antes de usar)
+
 static bool IsDirectoryWritable(string dirPath)
 {
     try
@@ -41,8 +41,7 @@ static bool IsDirectoryWritable(string dirPath)
     }
 }
 
-// Configurar Entity Framework com SQLite
-// No Railway, usar diretório persistente ou /tmp se disponível
+
 var dbDirectory = Environment.GetEnvironmentVariable("RAILWAY_VOLUME_MOUNT_PATH");
 if (string.IsNullOrEmpty(dbDirectory))
 {
@@ -67,7 +66,7 @@ else
     Console.WriteLine($"✅ RAILWAY_VOLUME_MOUNT_PATH configurado: {dbDirectory}");
 }
 
-// Garantir que o diretório existe e tem permissões
+
 if (!Directory.Exists(dbDirectory))
 {
     try
@@ -85,7 +84,7 @@ var dbPath = Path.Combine(dbDirectory, "fortnite.db");
 Console.WriteLine($"Diretório do banco: {dbDirectory}");
 Console.WriteLine($"Caminho completo do banco: {dbPath}");
 
-// Função para limpar arquivos temporários do SQLite
+
 static void CleanSqliteTempFiles(string dbPath)
 {
     var tempFiles = new[] { dbPath + "-shm", dbPath + "-wal", dbPath + "-journal" };
@@ -98,7 +97,7 @@ static void CleanSqliteTempFiles(string dbPath)
             {
                 if (File.Exists(tempFile))
                 {
-                    // Tentar remover atributo somente leitura se existir
+                    
                     var fileInfo = new FileInfo(tempFile);
                     if (fileInfo.Exists)
                     {
@@ -113,7 +112,7 @@ static void CleanSqliteTempFiles(string dbPath)
             catch (Exception ex) when (attempt < 2)
             {
                 Console.WriteLine($"Tentativa {attempt + 1} falhou ao remover {tempFile}: {ex.Message}");
-                Thread.Sleep(500); // Aguardar 500ms antes de tentar novamente
+                Thread.Sleep(500); 
             }
             catch (Exception ex)
             {
@@ -123,7 +122,7 @@ static void CleanSqliteTempFiles(string dbPath)
     }
 }
 
-// Limpar arquivos temporários antes de configurar o banco
+
 CleanSqliteTempFiles(dbPath);
 
 Console.WriteLine($"Banco de dados será criado em: {dbPath}");
@@ -158,7 +157,7 @@ builder.Services.AddCors(options =>
             "https://test-fort-nine.vercel.app"
         };
         
-        // Adicionar origem do Vercel se estiver configurada
+
         var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
         if (!string.IsNullOrEmpty(frontendUrl))
         {
@@ -184,7 +183,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Criar banco de dados se não existir
+
 using (var scope = app.Services.CreateScope())
 {
     int maxRetries = 5;
@@ -281,6 +280,8 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors();
+
+app.UseAuthentication();
 
 app.Use(async (context, next) =>
 {
