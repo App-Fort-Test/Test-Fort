@@ -15,11 +15,33 @@ namespace Backend.Controllers
         }
         
         [HttpPost("purchase")]
-        public async Task<IActionResult> PurchaseBundle([FromBody] PurchaseBundleRequest request, [FromHeader(Name = "X-User-Id")] int? userId)
+        public async Task<IActionResult> PurchaseBundle([FromBody] PurchaseBundleRequest request, [FromHeader(Name = "X-User-Id")] string? userIdHeader = null)
         {
+            // Tentar obter userId do header (pode vir como string)
+            int? userId = null;
+            if (!string.IsNullOrEmpty(userIdHeader))
+            {
+                if (int.TryParse(userIdHeader, out int parsedUserId))
+                {
+                    userId = parsedUserId;
+                }
+            }
+            
+            // Se não conseguiu do header, tentar do Request.Headers diretamente
+            if (!userId.HasValue && Request.Headers.TryGetValue("X-User-Id", out var headerValue))
+            {
+                if (int.TryParse(headerValue.ToString(), out int parsedUserId))
+                {
+                    userId = parsedUserId;
+                }
+            }
+            
             if (!userId.HasValue)
             {
-                return Unauthorized(new { message = "É necessário estar logado para comprar bundles" });
+                return Unauthorized(new { 
+                    success = false,
+                    message = "É necessário estar logado para comprar bundles" 
+                });
             }
             
             if (request.Cosmetics == null || request.Cosmetics.Count == 0)

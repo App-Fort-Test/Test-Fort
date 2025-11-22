@@ -4,7 +4,7 @@
 
             <div class="nav-top">
                 <div class="logo">
-                    <img src="C:\Users\marce\OneDrive\Documentos\GitHub\Frontend\FortniteFront\src\assets\svg\logo.svg" alt="Fortnite Logo" class="fortnite-logo" />
+                    <img :src="logo" alt="Fortnite Logo" class="fortnite-logo" />
                 </div>
 
                 <div class="action">
@@ -65,6 +65,7 @@ import BaseModal from '../Modal/User/BaseModal.vue';
 import LoginModal from '../Modal/User/LoginModal.vue';
 import SignupModal from '../Modal/User/SignupModal.vue'; 
 import HeaderLogin from './HeaderLogin.vue';
+import logo from '../../assets/svg/logo.svg';
 
 const props = defineProps({
   activeRoute: {

@@ -1,6 +1,17 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5155/api';
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    if (envUrl.startsWith('/')) {
+      return envUrl.replace('/ControllerCosmeticsEnriched', '');
+    }
+    return envUrl.replace('/ControllerCosmeticsEnriched', '');
+  }
+  return 'http://localhost:5155/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const usersAPI = axios.create({
   baseURL: API_BASE_URL,

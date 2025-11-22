@@ -1,7 +1,7 @@
 <template>
   <div class="tabs-container">
     <div 
-      v-for="tab in tabs" 
+      v-for="tab in availableTabs" 
       :key="tab.value"
       class="tab-item"
       :class="{ 'is-active': modelValue === tab.value }"
@@ -13,6 +13,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
+import { useAuth } from '../../composables/useAuth';
+
 defineProps({
   modelValue: {
     type: String,
@@ -22,13 +25,22 @@ defineProps({
 
 defineEmits(['update:modelValue']);
 
-const tabs = [
+const { user } = useAuth();
+
+const allTabs = [
   { label: 'Todos', value: 'todos' },
   { label: 'Novos', value: 'novos' },
   { label: 'Promoção', value: 'promocao' },
   { label: 'Bundle', value: 'bundle' },
   { label: 'Possuido', value: 'possuido' }
 ];
+
+const availableTabs = computed(() => {
+  if (user.value) {
+    return allTabs;
+  }
+  return allTabs.filter(tab => tab.value !== 'possuido');
+});
 </script>
 
 <style scoped>

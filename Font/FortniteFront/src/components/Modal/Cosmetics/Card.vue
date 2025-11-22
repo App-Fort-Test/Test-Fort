@@ -12,10 +12,20 @@
             <div 
                 class="rarity-tag" 
                 :title="rarityLabelFull.length > 8 ? rarityLabelFull : ''"
+                :style="{ 
+                    background: solidRarityColor,
+                    borderColor: darkRarityColor,
+                    color: textColor
+                }"
             >{{ rarityLabelDisplay }}</div>
         </div>
 
-        <div class="image-container">
+        <div 
+            class="image-container"
+            :style="{
+                background: solidRarityColor
+            }"
+        >
             <img 
                 :src="imageSrc" 
                 :alt="itemNameFull"
@@ -29,17 +39,22 @@
                 <div 
                     class="price-badge" 
                     :title="typeDisplayFull.length > 12 ? typeDisplayFull : ''"
+                    :style="{ 
+                        background: solidRarityColor,
+                        borderColor: darkRarityColor,
+                        color: textColor
+                    }"
                 >{{ typeDisplay }}</div>
                 <!-- Badges empilhados no canto inferior direito -->
+                <div 
+                    v-if="cosmetic?.isOwned" 
+                    class="discont-badge owned-badge bottom-badge status-badge"
+                    :style="{ bottom: getStatusBadgePosition('owned') + 'px' }"
+                >ADQUIRIDO</div>
                 <div 
                     v-if="cosmetic?.isOnSale" 
                     class="discont-badge bottom-badge status-badge"
                     :style="{ bottom: getStatusBadgePosition('promo') + 'px' }"
-                >PROMOÇÃO</div>
-                <div 
-                    v-if="cosmetic?.isInShop && !cosmetic?.isOwned && !cosmetic?.isOnSale" 
-                    class="discont-badge shop-badge bottom-badge status-badge"
-                    :style="{ bottom: getStatusBadgePosition('shop') + 'px' }"
                 >PROMOÇÃO</div>
                 <div 
                     v-if="cosmetic?.isNew" 
@@ -51,7 +66,6 @@
                     class="discont-badge bundle-badge bottom-badge status-badge"
                     :style="{ bottom: getStatusBadgePosition('bundle') + 'px' }"
                 >BUNDLE</div>
-                <div v-if="cosmetic?.isOwned" class="discont-badge owned-badge bottom-badge">ADQUIRIDO</div>
             </div>
         </div>
 
@@ -87,6 +101,11 @@
                 class="buy-button"
                 @click="handlePurchase"
                 :disabled="isPurchasing"
+                :style="{ 
+                    background: solidRarityColor,
+                    borderColor: darkRarityColor,
+                    color: textColor
+                }"
             >
                 {{ isPurchasing ? 'Comprando...' : 'Comprar' }}
             </button>
@@ -95,6 +114,11 @@
                 class="buy-button"
                 disabled
                 title="Login para comprar"
+                :style="{ 
+                    background: solidRarityColor,
+                    borderColor: darkRarityColor,
+                    color: textColor
+                }"
             >
                 Login para comprar
             </button>
@@ -115,11 +139,20 @@
             <button v-else class="buy-button" disabled>
                 Indisponível
             </button>
-            <button class="details-button" @click="handleShowDetails">
+            <button 
+                class="details-button" 
+                @click="handleShowDetails"
+                :style="{ 
+                    background: solidRarityColor,
+                    borderColor: darkRarityColor,
+                    color: textColor
+                }"
+            >
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
                     <path
+                        :stroke="textColor"
                         d="M12 16V12M12 8H12.01M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12Z"
-                        stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
                 </svg>
             </button>
         </div>
@@ -127,7 +160,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { useAuth } from '../../../composables/useAuth';
 import logoMoeda from '../../../assets/svg/logomoeda.svg';
 import fundoComum from '../../../assets/svg/fundocomum.svg';
@@ -175,29 +208,29 @@ const generateRarityColor = (rarityName) => {
     
     // Mapeamento de cores para raridades conhecidas
     const colorMap = {
-        common: { gradient: 'linear-gradient(162deg, #B0B0B0 22.61%, #808080 118.29%)', border: '#808080' },
-        uncommon: { gradient: 'linear-gradient(162deg, #00FF00 22.61%, #00CC00 118.29%)', border: '#00CC00' },
-        rare: { gradient: 'linear-gradient(162deg, #0080FF 22.61%, #0066CC 118.29%)', border: '#0066CC' },
-        epic: { gradient: 'linear-gradient(162deg, #8000FF 22.61%, #6600CC 118.29%)', border: '#6600CC' },
-        legendary: { gradient: 'linear-gradient(162deg, #FF8000 22.61%, #CC6600 118.29%)', border: '#CC6600' },
-        mythic: { gradient: 'linear-gradient(162deg, #FF0080 22.61%, #CC0066 118.29%)', border: '#CC0066' },
-        gaminglegends: { gradient: 'linear-gradient(162deg, #FFD700 22.61%, #FFA500 118.29%)', border: '#FFA500' },
-        'gaming legends': { gradient: 'linear-gradient(162deg, #FFD700 22.61%, #FFA500 118.29%)', border: '#FFA500' },
-        marvel: { gradient: 'linear-gradient(162deg, #FF0000 22.61%, #CC0000 118.29%)', border: '#CC0000' },
-        'marvel series': { gradient: 'linear-gradient(162deg, #FF0000 22.61%, #CC0000 118.29%)', border: '#CC0000' },
-        icon: { gradient: 'linear-gradient(162deg, #00FFFF 22.61%, #00CCCC 118.29%)', border: '#00CCCC' },
-        'icon series': { gradient: 'linear-gradient(162deg, #00FFFF 22.61%, #00CCCC 118.29%)', border: '#00CCCC' },
-        dc: { gradient: 'linear-gradient(162deg, #0000FF 22.61%, #0000CC 118.29%)', border: '#0000CC' },
-        'dc series': { gradient: 'linear-gradient(162deg, #0000FF 22.61%, #0000CC 118.29%)', border: '#0000CC' },
-        starwars: { gradient: 'linear-gradient(162deg, #FFFF00 22.61%, #CCCC00 118.29%)', border: '#CCCC00' },
-        'star wars': { gradient: 'linear-gradient(162deg, #FFFF00 22.61%, #CCCC00 118.29%)', border: '#CCCC00' },
-        frozen: { gradient: 'linear-gradient(162deg, #00FFFF 22.61%, #00CCFF 118.29%)', border: '#00CCFF' },
-        lava: { gradient: 'linear-gradient(162deg, #FF4500 22.61%, #CC3700 118.29%)', border: '#CC3700' },
-        dark: { gradient: 'linear-gradient(162deg, #2C2C2C 22.61%, #1A1A1A 118.29%)', border: '#1A1A1A' },
-        shadow: { gradient: 'linear-gradient(162deg, #4B0082 22.61%, #3D0066 118.29%)', border: '#3D0066' },
-        slurp: { gradient: 'linear-gradient(162deg, #00D4FF 22.61%, #00A8CC 118.29%)', border: '#00A8CC' },
-        slurpseries: { gradient: 'linear-gradient(162deg, #00D4FF 22.61%, #00A8CC 118.29%)', border: '#00A8CC' },
-        'slurp series': { gradient: 'linear-gradient(162deg, #00D4FF 22.61%, #00A8CC 118.29%)', border: '#00A8CC' },
+        common: { gradient: 'linear-gradient(180deg, #808080 0%, #B0B0B0 50%, rgba(128, 128, 128, 0.70) 100%)', border: '#808080' },
+        uncommon: { gradient: 'linear-gradient(180deg, #00CC00 0%, #00FF00 50%, rgba(0, 204, 0, 0.70) 100%)', border: '#00CC00' },
+        rare: { gradient: 'linear-gradient(180deg, #137BBE 0%, #12D8FA 50%, rgba(19, 123, 190, 0.70) 100%)', border: '#0066CC' },
+        epic: { gradient: 'linear-gradient(180deg, #6600CC 0%, #BA68C8 50%, rgba(102, 0, 204, 0.70) 100%)', border: '#6600CC' },
+        legendary: { gradient: 'linear-gradient(180deg, #CC6600 0%, #FFB74D 50%, rgba(204, 102, 0, 0.70) 100%)', border: '#CC6600' },
+        mythic: { gradient: 'linear-gradient(180deg, #CC0066 0%, #F06292 50%, rgba(204, 0, 102, 0.70) 100%)', border: '#CC0066' },
+        gaminglegends: { gradient: 'linear-gradient(180deg, #FFA500 0%, #FFD700 50%, rgba(255, 165, 0, 0.70) 100%)', border: '#FFA500' },
+        'gaming legends': { gradient: 'linear-gradient(180deg, #FFA500 0%, #FFD700 50%, rgba(255, 165, 0, 0.70) 100%)', border: '#FFA500' },
+        marvel: { gradient: 'linear-gradient(180deg, #CC0000 0%, #FF3333 50%, rgba(204, 0, 0, 0.70) 100%)', border: '#CC0000' },
+        'marvel series': { gradient: 'linear-gradient(180deg, #CC0000 0%, #FF3333 50%, rgba(204, 0, 0, 0.70) 100%)', border: '#CC0000' },
+        icon: { gradient: 'linear-gradient(180deg, #00CCCC 0%, #00FFFF 50%, rgba(0, 204, 204, 0.70) 100%)', border: '#00CCCC' },
+        'icon series': { gradient: 'linear-gradient(180deg, #00CCCC 0%, #00FFFF 50%, rgba(0, 204, 204, 0.70) 100%)', border: '#00CCCC' },
+        dc: { gradient: 'linear-gradient(180deg, #0000CC 0%, #3333FF 50%, rgba(0, 0, 204, 0.70) 100%)', border: '#0000CC' },
+        'dc series': { gradient: 'linear-gradient(180deg, #0000CC 0%, #3333FF 50%, rgba(0, 0, 204, 0.70) 100%)', border: '#0000CC' },
+        starwars: { gradient: 'linear-gradient(180deg, #CCCC00 0%, #FFFF00 50%, rgba(204, 204, 0, 0.70) 100%)', border: '#CCCC00' },
+        'star wars': { gradient: 'linear-gradient(180deg, #CCCC00 0%, #FFFF00 50%, rgba(204, 204, 0, 0.70) 100%)', border: '#CCCC00' },
+        frozen: { gradient: 'linear-gradient(180deg, #00CCFF 0%, #00FFFF 50%, rgba(0, 204, 255, 0.70) 100%)', border: '#00CCFF' },
+        lava: { gradient: 'linear-gradient(180deg, #CC3700 0%, #FF6633 50%, rgba(204, 55, 0, 0.70) 100%)', border: '#CC3700' },
+        dark: { gradient: 'linear-gradient(180deg, #1A1A1A 0%, #2C2C2C 50%, rgba(26, 26, 26, 0.70) 100%)', border: '#1A1A1A' },
+        shadow: { gradient: 'linear-gradient(180deg, #3D0066 0%, #6B00B3 50%, rgba(61, 0, 102, 0.70) 100%)', border: '#3D0066' },
+        slurp: { gradient: 'linear-gradient(180deg, #00A8CC 0%, #00D4FF 50%, rgba(0, 168, 204, 0.70) 100%)', border: '#00A8CC' },
+        slurpseries: { gradient: 'linear-gradient(180deg, #00A8CC 0%, #00D4FF 50%, rgba(0, 168, 204, 0.70) 100%)', border: '#00A8CC' },
+        'slurp series': { gradient: 'linear-gradient(180deg, #00A8CC 0%, #00D4FF 50%, rgba(0, 168, 204, 0.70) 100%)', border: '#00A8CC' },
     };
     
     // Se já existe no mapa, retorna
@@ -215,12 +248,45 @@ const generateRarityColor = (rarityName) => {
     const saturation = 60 + (Math.abs(hash) % 20); // 60-80%
     const lightness = 40 + (Math.abs(hash) % 20); // 40-60%
     
-    const color1 = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-    const color2 = `hsl(${hue}, ${saturation}%, ${lightness - 15}%)`;
-    const borderColor = `hsl(${hue}, ${saturation}%, ${lightness - 10}%)`;
+    // Converter HSL para RGB para criar o gradiente no formato correto
+    const h = hue / 360;
+    const s = saturation / 100;
+    const l1 = lightness / 100;
+    const l2 = Math.min(1, (lightness + 20) / 100); // Cor intermediária mais clara
+    
+    // Função auxiliar para converter HSL para RGB
+    const hslToRgb = (h, s, l) => {
+        let r, g, b;
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = Math.round(hue2rgb(p, q, h + 1/3) * 255);
+            g = Math.round(hue2rgb(p, q, h) * 255);
+            b = Math.round(hue2rgb(p, q, h - 1/3) * 255);
+        }
+        return { r, g, b };
+    };
+    
+    const rgb1 = hslToRgb(h, s, l1);
+    const rgb2 = hslToRgb(h, s, l2);
+    const borderRgb = hslToRgb(h, s, Math.max(0, (lightness - 10) / 100));
+    
+    const color1 = `rgb(${rgb1.r}, ${rgb1.g}, ${rgb1.b})`;
+    const color2 = `rgb(${rgb2.r}, ${rgb2.g}, ${rgb2.b})`;
+    const borderColor = `rgb(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b})`;
     
     return {
-        gradient: `linear-gradient(162deg, ${color1} 22.61%, ${color2} 118.29%)`,
+        gradient: `linear-gradient(180deg, ${color1} 0%, ${color2} 50%, rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, 0.70) 100%)`,
         border: borderColor
     };
 };
@@ -336,6 +402,125 @@ const rarityColors = computed(() => {
     return config?.colors || generateRarityColor(normalizedRarity.value);
 });
 
+// Função para extrair cor sólida principal do gradiente
+const getSolidColor = (gradient) => {
+    // Extrair a primeira cor do gradiente (hexadecimal)
+    const hexMatch = gradient.match(/#[0-9A-Fa-f]{6}/);
+    if (hexMatch) {
+        return hexMatch[0];
+    }
+    // Tentar extrair cor RGB
+    const rgbMatch = gradient.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbMatch) {
+        return `rgb(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]})`;
+    }
+    // Tentar extrair cor HSL
+    const hslMatch = gradient.match(/hsl\(([^)]+)\)/);
+    if (hslMatch) {
+        return `hsl(${hslMatch[1]})`;
+    }
+    // Se não encontrar, usar a cor da borda
+    return rarityColors.value.border || '#808080';
+};
+
+// Cor sólida principal baseada na raridade
+const solidRarityColor = computed(() => {
+    return getSolidColor(rarityColors.value.gradient);
+});
+
+// Cor sólida mais escura para bordas e elementos escuros
+const darkRarityColor = computed(() => {
+    return rarityColors.value.border || '#000000';
+});
+
+// Cor sólida mais clara para textos e elementos claros (extrair do gradiente)
+const lightRarityColor = computed(() => {
+    const gradient = rarityColors.value.gradient;
+    // Extrair a primeira cor do gradiente (mais clara)
+    const hexMatch = gradient.match(/#[0-9A-Fa-f]{6}/);
+    if (hexMatch) {
+        return hexMatch[0];
+    }
+    // Tentar extrair cor RGB
+    const rgbMatch = gradient.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (rgbMatch) {
+        return `rgb(${rgbMatch[1]}, ${rgbMatch[2]}, ${rgbMatch[3]})`;
+    }
+    // Tentar extrair cor HSL
+    const hslMatch = gradient.match(/hsl\(([^)]+)\)/);
+    if (hslMatch) {
+        return `hsl(${hslMatch[1]})`;
+    }
+    return '#FFFFFF';
+});
+
+// Função para calcular o brilho (luminância) de uma cor
+const getLuminance = (color) => {
+    let r, g, b;
+    
+    // Converter hex para RGB
+    if (color.startsWith('#')) {
+        const hex = color.slice(1);
+        r = parseInt(hex.slice(0, 2), 16);
+        g = parseInt(hex.slice(2, 4), 16);
+        b = parseInt(hex.slice(4, 6), 16);
+    } 
+    // Converter RGB para valores
+    else if (color.startsWith('rgb')) {
+        const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+        if (match) {
+            r = parseInt(match[1]);
+            g = parseInt(match[2]);
+            b = parseInt(match[3]);
+        } else {
+            return 0.5; // Fallback
+        }
+    }
+    // Converter HSL para RGB (aproximação)
+    else if (color.startsWith('hsl')) {
+        const match = color.match(/hsl\((\d+),\s*(\d+)%,\s*(\d+)%\)/);
+        if (match) {
+            const h = parseInt(match[1]) / 360;
+            const s = parseInt(match[2]) / 100;
+            const l = parseInt(match[3]) / 100;
+            // Converter HSL para RGB
+            const c = (1 - Math.abs(2 * l - 1)) * s;
+            const x = c * (1 - Math.abs((h * 6) % 2 - 1));
+            const m = l - c / 2;
+            if (h < 1/6) { r = c; g = x; b = 0; }
+            else if (h < 2/6) { r = x; g = c; b = 0; }
+            else if (h < 3/6) { r = 0; g = c; b = x; }
+            else if (h < 4/6) { r = 0; g = x; b = c; }
+            else if (h < 5/6) { r = x; g = 0; b = c; }
+            else { r = c; g = 0; b = x; }
+            r = Math.round((r + m) * 255);
+            g = Math.round((g + m) * 255);
+            b = Math.round((b + m) * 255);
+        } else {
+            return 0.5; // Fallback
+        }
+    } else {
+        return 0.5; // Fallback
+    }
+    
+    // Calcular luminância relativa (fórmula WCAG)
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance;
+};
+
+// Cor do texto baseada no contraste com o fundo
+const textColor = computed(() => {
+    const bgColor = solidRarityColor.value;
+    const luminance = getLuminance(bgColor);
+    // Se o fundo for claro (luminância > 0.5), usar texto escuro, senão usar texto claro
+    return luminance > 0.5 ? '#000000' : '#FFFFFF';
+});
+
+// Cor do texto para elementos com fundo escuro (bordas)
+const textColorDark = computed(() => {
+    return '#FFFFFF'; // Sempre branco para fundos escuros
+});
+
 // Imagem - usa da API se disponível
 const imageSrc = computed(() => {
     if (!props.cosmetic?.images) return '/placeholder.png';
@@ -424,31 +609,31 @@ const getStatusBadgePosition = (badgeType) => {
     const statusBadges = [];
     
     // Coletar todos os badges de status que estão visíveis, na ordem de empilhamento
+    // Badge "ADQUIRIDO" sempre fica na base (posição mais baixa)
+    if (props.cosmetic?.isOwned) statusBadges.push('owned');
     if (props.cosmetic?.isOnSale) statusBadges.push('promo');
-    if (props.cosmetic?.isInShop && !props.cosmetic?.isOwned && !props.cosmetic?.isOnSale) statusBadges.push('shop');
     if (props.cosmetic?.isNew) statusBadges.push('new');
     if (props.cosmetic?.isBundle) statusBadges.push('bundle');
+    if (props.cosmetic?.isAdquirir) statusBadges.push('adquirido');
     
     // Encontrar o índice do badge atual na lista
     const index = statusBadges.indexOf(badgeType);
     
     if (index === -1) return 8; // Se não encontrado, retorna posição padrão
     
-    // Calcular posição: 8px (base) + (índice * (32px altura + 8px gap))
-    // O primeiro badge (index 0) fica em 8px, o segundo em 48px, etc.
     return 8 + (index * 40); // 32px (altura) + 8px (gap) = 40px
 };
 
-// Pode comprar?
+
 const canPurchase = computed(() => {
     if (!props.cosmetic) return false;
     
-    // Verificar se tem preço (pode ser do shop ou aleatório)
+    if (props.cosmetic.isOwned) return false;
+    
     const price = props.cosmetic.price || props.cosmetic.regularPrice || 0;
     const hasPrice = price > 0;
     
-    // Pode comprar se tem preço e não está possuído (não precisa estar no shop)
-    return !props.cosmetic.isOwned && hasPrice;
+    return hasPrice;
 });
 
 const handlePurchase = () => {
@@ -542,13 +727,12 @@ const handleImageError = (event) => {
 .rarity-tag {
     display: flex;
     border-radius: 10px;
-    border: 1px solid #00458A;
+    border: 1px solid;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 100%;
     cursor: help;
-    background: #00458A;
     box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
     justify-content: center;
     align-items: center;
@@ -568,9 +752,9 @@ const handleImageError = (event) => {
     width: 100%;
     height: 250px;
     flex-shrink: 0;
-    background: #FFFFFF;
     border-radius: 10px;
     position: relative;
+    /* Background será aplicado via style binding para usar o gradiente da raridade */
 }
 
 .item-image {
@@ -587,8 +771,7 @@ const handleImageError = (event) => {
     width: 80px;
     height: 36px;
     border-radius: 16px;
-    border: 2px solid #312E81;
-    background: linear-gradient(162deg, #161A42 22.61%, #161A42 118.29%);
+    border: 2px solid;
     box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) inset;
     display: flex;
     justify-content: center;
@@ -751,10 +934,7 @@ const handleImageError = (event) => {
 }
 
 .discounted-price {
-    background: darkblue;
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: #001F3F; /* Azul escuro fixo */
     font-size: 22px;
     font-weight: 700;
     margin-bottom: 2px;
@@ -772,9 +952,8 @@ const handleImageError = (event) => {
 .buy-button {
     flex: 0;
     border-radius: 12px;
-    border: 2px solid #12D8FA;
-    background: #161A42;
-    box-shadow: 0 13px 17px 0 rgba(18, 216, 250, 0.40);
+    border: 2px solid;
+    box-shadow: 0 13px 17px 0 rgba(0, 0, 0, 0.40);
     display: flex;
     height: 48px;
     padding: 12px 13px;
@@ -793,9 +972,7 @@ const handleImageError = (event) => {
 }
 
 .buy-button:hover:not(:disabled) {
-    background: linear-gradient(162deg, #1fa2ff 22.61%, #12d8fa 118.29%);
-    border: 2px solid #12d8fa;
-    box-shadow: 0 13px 17px 0 rgba(18, 216, 250, 0.1);
+    box-shadow: 0 13px 17px 0 rgba(0, 0, 0, 0.1);
     color: #000000;
 }
 
@@ -823,8 +1000,7 @@ const handleImageError = (event) => {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    border: 2px solid #312E81;
-    background: #161A42;
+    border: 2px solid;
     box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
     display: flex;
     justify-content: center;
@@ -838,8 +1014,6 @@ const handleImageError = (event) => {
 }
 
 .details-button:hover {
-    border: 2px solid #12d8fa;
-    background: linear-gradient(162deg, #1c27a1 22.61%, rgba(22, 26, 66, 0) 118.29%);
     color: white;
 }
 </style>

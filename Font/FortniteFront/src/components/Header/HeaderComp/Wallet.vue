@@ -1,11 +1,13 @@
 <template>
   <div class="v-bucks">
-    <img src="C:\Users\marce\OneDrive\Documentos\GitHub\Privado\Font\FortniteFront\src\assets\svg\logomoeda.svg" alt="V-Bucks Icon" class="vbucks-icon" />
+    <img :src="logomoeda" alt="V-Bucks Icon" class="vbucks-icon" />
     <span class="vbucks-amount">{{ formatNumber(amount) }} V-Bucks</span>
   </div>
 </template>
 
 <script setup>
+import logomoeda from '../../../assets/svg/logomoeda.svg';
+
 const props = defineProps({
   amount: {
     type: Number,

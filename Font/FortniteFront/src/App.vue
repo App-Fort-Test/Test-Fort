@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import CardCompleto from './components/Modal/Cosmetics/CardCompleto.vue';
 import Header from './components/Header/Header.vue';
 import FilterMaster from './components/Filter/FilterMaster.vue';
@@ -9,9 +9,14 @@ import TransactionHistory from './components/Transactions/TransactionHistory.vue
 
 const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 const activeRoute = ref('loja');
-
+const lojaKey = ref(0); // Contador para forçar recriação do CardCompleto
 
 const setActiveRoute = (route) => {
+  // Se estava em outra rota e está voltando para loja, incrementar a key para forçar recriação
+  if (activeRoute.value !== 'loja' && route === 'loja') {
+    lojaKey.value++;
+    console.log('Voltando para a loja - forçando reset dos filtros');
+  }
   activeRoute.value = route;
 };
 
@@ -29,16 +34,16 @@ defineExpose({ setActiveRoute });
     </aside>
     
     <main class="content-area">
-      <CardCompleto />
+      <CardCompleto :key="`loja-${lojaKey}`" />
     </main>
   </div>
 
   <div v-else-if="activeRoute === 'usuarios'" class="users-container">
-    <UsersTable />
+    <UsersTable :key="`users-${activeRoute}`" />
   </div>
 
   <div v-else-if="activeRoute === 'historico'" class="history-container">
-    <TransactionHistory />
+    <TransactionHistory :key="`history-${activeRoute}`" />
   </div>
 </template>
 

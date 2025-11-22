@@ -45,7 +45,6 @@
             <span class="info-label">Status:</span>
             <span class="info-value">
               <span v-if="cosmetic.isNew" class="status-tag new">Novo</span>
-              <span v-if="cosmetic.isInShop" class="status-tag shop">Promoção</span>
               <span v-if="cosmetic.isOnSale" class="status-tag sale">Em Promoção</span>
               <span v-if="cosmetic.isOwned" class="status-tag owned">Adquirido</span>
               <span v-if="!cosmetic.isInShop && !cosmetic.isOwned" class="status-tag unavailable">Indisponível</span>
@@ -304,7 +303,21 @@ const handleRefund = async () => {
   try {
     const success = await refundCosmetic(props.cosmetic.id, props.cosmetic.name);
     if (success) {
+      // O refundCosmetic já atualiza os V-Bucks e a wallet, mas garantimos aqui também
       await loadVBucks();
+      // Atualizar wallet no header (o refundCosmetic já faz isso, mas garantimos aqui)
+      const { cosmeticsAPI } = await import('../../../services/api');
+      try {
+        if (user.value) {
+          const data = await cosmeticsAPI.getVBucks(user.value.id);
+          if (data.vbucks !== undefined) {
+            updateVBucks(data.vbucks);
+            console.log('Wallet atualizada no modal após devolução:', data.vbucks);
+          }
+        }
+      } catch (e) {
+        console.warn('Erro ao atualizar wallet no modal:', e);
+      }
       await searchCosmetics();
       alert('Cosmético devolvido com sucesso!');
       emit('refund-success');

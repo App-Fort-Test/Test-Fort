@@ -69,12 +69,12 @@ namespace Backend.Controllers
                 // Sem filtros, usa método paginado direto (mais rápido)
                 var result = await _enrichedServices.GetEnrichedCosmeticsAsync(page, pageSize, sortBy, userId);
                 // Obter contagem total de cosméticos de forma otimizada (com cache)
-                var totalCount = await _enrichedServices.GetTotalCosmeticsCountAsync(userId);
+                var totalCosmeticsCount = await _enrichedServices.GetTotalCosmeticsCountAsync(userId);
                 
                 return Ok(new
                 {
                     cosmetics = result,
-                    totalCount = totalCount,
+                    totalCount = totalCosmeticsCount,
                     page = page,
                     pageSize = pageSize
                 });
@@ -113,53 +113,196 @@ namespace Backend.Controllers
         }
 
         [HttpPost("purchase/{cosmeticId}")]
-        public async Task<IActionResult> PurchaseCosmetic(string cosmeticId, [FromBody] PurchaseRequest request, [FromHeader(Name = "X-User-Id")] int? userId)
+        public async Task<IActionResult> PurchaseCosmetic(string cosmeticId, [FromBody] PurchaseRequest request)
         {
-            if (!userId.HasValue)
+            // Tentar obter userId do header de múltiplas formas
+            int? userId = null;
+            
+            // Método 1: Tentar do Request.Headers diretamente (mais confiável)
+            if (Request.Headers.TryGetValue("X-User-Id", out var headerValue))
             {
-                return Unauthorized(new { message = "É necessário estar logado para comprar cosméticos" });
+                var headerString = headerValue.ToString().Trim();
+                if (!string.IsNullOrEmpty(headerString) && int.TryParse(headerString, out int parsedUserId))
+                {
+                    userId = parsedUserId;
+                }
             }
             
-            var cosmeticName = request.CosmeticName ?? cosmeticId;
-            var success = await _inventoryService.PurchaseCosmeticAsync(userId.Value, cosmeticId, cosmeticName, request.Price);
-            
-            if (success)
+            // Método 2: Tentar case-insensitive se não encontrou
+            if (!userId.HasValue)
             {
-                var vbucks = await _inventoryService.GetVbucksAsync(userId.Value);
-                return Ok(new { 
-                    success = true, 
-                    vbucks = vbucks,
-                    message = "Cosmético adquirido com sucesso!" 
+                foreach (var header in Request.Headers)
+                {
+                    if (header.Key.Equals("X-User-Id", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var headerString = header.Value.ToString().Trim();
+                        if (!string.IsNullOrEmpty(headerString) && int.TryParse(headerString, out int parsedUserId))
+                        {
+                            userId = parsedUserId;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Método 3: Tentar do parâmetro [FromHeader] (pode não funcionar sempre)
+            if (!userId.HasValue && Request.Headers.ContainsKey("X-User-Id"))
+            {
+                var headerValues = Request.Headers["X-User-Id"];
+                if (headerValues.Count > 0)
+                {
+                    var headerString = headerValues[0]?.Trim();
+                    if (!string.IsNullOrEmpty(headerString) && int.TryParse(headerString, out int parsedUserId))
+                    {
+                        userId = parsedUserId;
+                    }
+                }
+            }
+            
+            if (!userId.HasValue)
+            {
+                return Unauthorized(new { 
+                    success = false,
+                    message = "É necessário estar logado para comprar cosméticos. UserId não encontrado no header X-User-Id." 
                 });
             }
             
-            return BadRequest(new { 
-                success = false, 
-                message = "Não foi possível adquirir o cosmético. Verifique se você tem créditos suficientes ou se já possui este item." 
-            });
+            // Validar cosmeticId
+            if (string.IsNullOrWhiteSpace(cosmeticId))
+            {
+                return BadRequest(new { 
+                    success = false,
+                    message = "ID do cosmético é obrigatório" 
+                });
+            }
+            
+            // Validar request
+            if (request == null)
+            {
+                return BadRequest(new { 
+                    success = false,
+                    message = "Dados da compra são obrigatórios" 
+                });
+            }
+            
+            // Validar preço
+            if (request.Price <= 0)
+            {
+                return BadRequest(new { 
+                    success = false,
+                    message = "Preço deve ser maior que zero" 
+                });
+            }
+            
+            try
+            {
+                var cosmeticName = request.CosmeticName ?? cosmeticId;
+                var success = await _inventoryService.PurchaseCosmeticAsync(userId.Value, cosmeticId, cosmeticName, request.Price);
+                
+                if (success)
+                {
+                    var vbucks = await _inventoryService.GetVbucksAsync(userId.Value);
+                    
+                    return Ok(new { 
+                        success = true, 
+                        vbucks = vbucks,
+                        message = "Cosmético adquirido com sucesso!" 
+                    });
+                }
+                
+                var isOwned = await _inventoryService.IsOwnedAsync(userId.Value, cosmeticId);
+                if (isOwned)
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = "Você já possui este cosmético. Cada cosmético só pode ser comprado uma vez." 
+                    });
+                }
+                
+                var vbucksCheck = await _inventoryService.GetVbucksAsync(userId.Value);
+                if (vbucksCheck < request.Price)
+                {
+                    return BadRequest(new { 
+                        success = false, 
+                        message = "Você não tem créditos suficientes para comprar este cosmético." 
+                    });
+                }
+                
+                return BadRequest(new { 
+                    success = false, 
+                    message = "Não foi possível adquirir o cosmético." 
+                });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erro ao processar compra: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return StatusCode(500, new { 
+                    success = false, 
+                    message = "Erro interno ao processar a compra. Tente novamente." 
+                });
+            }
         }
 
         [HttpGet("inventory")]
-        public async Task<IActionResult> GetInventory([FromHeader(Name = "X-User-Id")] int? userId)
+        public async Task<IActionResult> GetInventory([FromHeader(Name = "X-User-Id")] string? userIdHeader = null)
         {
+            // Tentar obter userId do header (pode vir como string)
+            int? userId = null;
+            if (!string.IsNullOrEmpty(userIdHeader))
+            {
+                if (int.TryParse(userIdHeader, out int parsedUserId))
+                {
+                    userId = parsedUserId;
+                }
+            }
+            
+            // Se não conseguiu do header, tentar do Request.Headers diretamente
+            if (!userId.HasValue && Request.Headers.TryGetValue("X-User-Id", out var headerValue))
+            {
+                if (int.TryParse(headerValue.ToString(), out int parsedUserId))
+                {
+                    userId = parsedUserId;
+                }
+            }
+            
             if (!userId.HasValue)
             {
                 return Unauthorized(new { message = "É necessário estar logado para ver o inventário" });
             }
             
-            var ownedCosmetics = await _inventoryService.GetOwnedCosmeticsAsync(userId.Value);
+            var ownedCosmetics = await _inventoryService.GetOwnedCosmeticsFromTransactionsAsync(userId.Value);
             var vbucks = await _inventoryService.GetVbucksAsync(userId.Value);
             
             return Ok(new
             {
-                ownedCosmetics = ownedCosmetics,
+                ownedCosmetics = ownedCosmetics.Select(id => new { cosmeticId = id }).ToList(),
                 vbucks = vbucks
             });
         }
 
         [HttpGet("vbucks")]
-        public async Task<IActionResult> GetVbucks([FromHeader(Name = "X-User-Id")] int? userId)
+        public async Task<IActionResult> GetVbucks([FromHeader(Name = "X-User-Id")] string? userIdHeader = null)
         {
+            // Tentar obter userId do header (pode vir como string)
+            int? userId = null;
+            if (!string.IsNullOrEmpty(userIdHeader))
+            {
+                if (int.TryParse(userIdHeader, out int parsedUserId))
+                {
+                    userId = parsedUserId;
+                }
+            }
+            
+            // Se não conseguiu do header, tentar do Request.Headers diretamente
+            if (!userId.HasValue && Request.Headers.TryGetValue("X-User-Id", out var headerValue))
+            {
+                if (int.TryParse(headerValue.ToString(), out int parsedUserId))
+                {
+                    userId = parsedUserId;
+                }
+            }
+            
             if (!userId.HasValue)
             {
                 return Unauthorized(new { message = "É necessário estar logado para ver os créditos" });

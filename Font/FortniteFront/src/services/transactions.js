@@ -1,6 +1,17 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5155/api';
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    if (envUrl.startsWith('/')) {
+      return envUrl.replace('/ControllerCosmeticsEnriched', '');
+    }
+    return envUrl.replace('/ControllerCosmeticsEnriched', '');
+  }
+  return 'http://localhost:5155/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 const transactionsAPI = axios.create({
   baseURL: API_BASE_URL,
@@ -9,12 +20,19 @@ const transactionsAPI = axios.create({
   },
 });
 
-// Interceptor para adicionar userId nos headers quando disponível
 transactionsAPI.interceptors.request.use(
   (config) => {
-    const userId = localStorage.getItem('userId');
-    if (userId) {
-      config.headers['X-User-Id'] = userId;
+    const existingUserId = config.headers['X-User-Id'];
+    console.log('Interceptor transactionsAPI - URL:', config.url, 'X-User-Id existente:', existingUserId);
+    
+    if (!existingUserId) {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        config.headers['X-User-Id'] = userId;
+        console.log('Interceptor adicionou userId do localStorage:', userId);
+      }
+    } else {
+      console.log('Interceptor não adicionou userId - já existe:', existingUserId);
     }
     return config;
   },
@@ -24,20 +42,87 @@ transactionsAPI.interceptors.request.use(
 );
 
 export const transactionsService = {
-  // Obter histórico de transações
   getHistory: async (userId) => {
     try {
-      const response = await transactionsAPI.get('/transactions', {
-        headers: userId ? { 'X-User-Id': userId.toString() } : {}
-      });
+      const userIdNum = userId ? (typeof userId === 'string' ? parseInt(userId, 10) : userId) : null;
+      
+      let finalUserId = userIdNum;
+      if (!finalUserId) {
+        const storedUserId = localStorage.getItem('userId');
+        if (storedUserId) {
+          finalUserId = parseInt(storedUserId, 10);
+          console.log('UserId obtido do localStorage para histórico:', finalUserId);
+        }
+      }
+      
+      if (!finalUserId) {
+        throw new Error('UserId não encontrado. É necessário especificar um userId ou estar logado para ver o histórico.');
+      }
+      
+      console.log('Buscando histórico com userId:', finalUserId, 'tipo:', typeof finalUserId);
+      console.log('UserId do localStorage (não deve ser usado aqui):', localStorage.getItem('userId'));
+      
+      const config = {
+        headers: { 
+          'X-User-Id': finalUserId.toString(),
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      config.headers['X-User-Id'] = finalUserId.toString();
+      
+      console.log('Headers que serão enviados:', config.headers);
+      const response = await transactionsAPI.get('/transactions', config);
+      
+      console.log('Resposta do histórico recebida:', response.data);
+      console.log('Número de transações retornadas:', response.data?.transactions?.length || 0);
+      
+      if (response.data?.transactions && response.data.transactions.length > 0) {
+        console.log('Primeira transação:', response.data.transactions[0]);
+      }
       return response.data;
     } catch (error) {
       console.error('Erro ao buscar histórico:', error);
+      console.error('Detalhes do erro:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw error;
     }
   },
 
-  // Devolver cosmético
+  getOwnedCosmetics: async (userId) => {
+    try {
+      const userIdNum = userId ? (typeof userId === 'string' ? parseInt(userId, 10) : userId) : null;
+      let finalUserId = userIdNum;
+      
+      if (!finalUserId) {
+        const storedUserId = localStorage.getItem('userId');
+        if (storedUserId) {
+          finalUserId = parseInt(storedUserId, 10);
+        }
+      }
+      
+      if (!finalUserId) {
+        throw new Error('UserId não encontrado');
+      }
+      
+      const config = {
+        headers: { 
+          'X-User-Id': finalUserId.toString(),
+          'Content-Type': 'application/json'
+        }
+      };
+      
+      const response = await transactionsAPI.get('/transactions/owned', config);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar itens possuídos das transações:', error);
+      throw error;
+    }
+  },
+
   refundCosmetic: async (cosmeticId, cosmeticName, userId) => {
     try {
       const response = await transactionsAPI.post(`/transactions/refund/${cosmeticId}`, {

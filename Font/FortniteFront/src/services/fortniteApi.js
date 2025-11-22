@@ -1,24 +1,20 @@
 import axios from 'axios';
 
-// API Externa do Fortnite
 const FORTNITE_API_BASE_URL = 'https://fortnite-api.com/v2/';
 
-// Criar instância do axios para a API externa
 const fortniteApi = axios.create({
   baseURL: FORTNITE_API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 segundos de timeout
+  timeout: 10000,
 });
 
-// Configurações do localStorage para API externa
 const STORAGE_PREFIX_FORTNITE = 'fortnite_external_';
-const CACHE_EXPIRY_COSMETICS_MS = 30 * 60 * 1000; // 30 minutos
-const CACHE_EXPIRY_NEW_MS = 10 * 60 * 1000; // 10 minutos
-const CACHE_EXPIRY_SHOP_MS = 5 * 60 * 1000; // 5 minutos
+const CACHE_EXPIRY_COSMETICS_MS = 30 * 60 * 1000;
+const CACHE_EXPIRY_NEW_MS = 10 * 60 * 1000;
+const CACHE_EXPIRY_SHOP_MS = 5 * 60 * 1000;
 
-// Funções auxiliares para localStorage
 const saveToStorage = (key, data, expiryMs) => {
   try {
     const cacheData = {
@@ -88,11 +84,9 @@ const clearOldestCache = () => {
 };
 
 export const fortniteExternalAPI = {
-  // Buscar todos os cosméticos diretamente da API externa
   getCosmetics: async (forceRefresh = false) => {
     const cacheKey = `${STORAGE_PREFIX_FORTNITE}cosmetics`;
     
-    // Tentar carregar do localStorage primeiro
     if (!forceRefresh) {
       const cached = loadFromStorage(cacheKey, CACHE_EXPIRY_COSMETICS_MS);
       if (cached) {
@@ -105,14 +99,12 @@ export const fortniteExternalAPI = {
       const response = await fortniteApi.get('cosmetics');
       const data = response.data;
       
-      // Salvar no localStorage
       saveToStorage(cacheKey, data, CACHE_EXPIRY_COSMETICS_MS);
       console.log('Cosméticos salvos no localStorage (API externa)');
       
       return data;
     } catch (error) {
       console.error('Erro ao buscar cosméticos da API externa:', error);
-      // Tentar retornar cache mesmo expirado em caso de erro
       const cached = loadFromStorage(cacheKey, Infinity);
       if (cached) {
         console.log('Usando cache expirado de cosméticos devido a erro');
@@ -122,11 +114,9 @@ export const fortniteExternalAPI = {
     }
   },
 
-  // Buscar novos cosméticos diretamente da API externa
   getNewCosmetics: async (forceRefresh = false) => {
     const cacheKey = `${STORAGE_PREFIX_FORTNITE}new`;
     
-    // Tentar carregar do localStorage primeiro
     if (!forceRefresh) {
       const cached = loadFromStorage(cacheKey, CACHE_EXPIRY_NEW_MS);
       if (cached) {
@@ -139,14 +129,12 @@ export const fortniteExternalAPI = {
       const response = await fortniteApi.get('cosmetics/new');
       const data = response.data;
       
-      // Salvar no localStorage
       saveToStorage(cacheKey, data, CACHE_EXPIRY_NEW_MS);
       console.log('Novos cosméticos salvos no localStorage (API externa)');
       
       return data;
     } catch (error) {
       console.error('Erro ao buscar novos cosméticos da API externa:', error);
-      // Tentar retornar cache mesmo expirado em caso de erro
       const cached = loadFromStorage(cacheKey, Infinity);
       if (cached) {
         console.log('Usando cache expirado de novos cosméticos devido a erro');
@@ -156,11 +144,9 @@ export const fortniteExternalAPI = {
     }
   },
 
-  // Buscar shop diretamente da API externa
   getShop: async (forceRefresh = false) => {
     const cacheKey = `${STORAGE_PREFIX_FORTNITE}shop`;
     
-    // Tentar carregar do localStorage primeiro
     if (!forceRefresh) {
       const cached = loadFromStorage(cacheKey, CACHE_EXPIRY_SHOP_MS);
       if (cached) {
@@ -173,14 +159,12 @@ export const fortniteExternalAPI = {
       const response = await fortniteApi.get('shop');
       const data = response.data;
       
-      // Salvar no localStorage
       saveToStorage(cacheKey, data, CACHE_EXPIRY_SHOP_MS);
       console.log('Shop salvo no localStorage (API externa)');
       
       return data;
     } catch (error) {
       console.error('Erro ao buscar shop da API externa:', error);
-      // Tentar retornar cache mesmo expirado em caso de erro
       const cached = loadFromStorage(cacheKey, Infinity);
       if (cached) {
         console.log('Usando cache expirado de shop devido a erro');

@@ -82,15 +82,15 @@ namespace Backend.Services
                         else
                         {
                             // Item único
-                            foreach (var item in entry.BrItems)
+                        foreach (var item in entry.BrItems)
+                        {
+                            if (!shopCosmetics.ContainsKey(item.Id))
                             {
-                                if (!shopCosmetics.ContainsKey(item.Id))
-                                {
-                                    shopCosmetics[item.Id] = entry;
-                                }
+                                shopCosmetics[item.Id] = entry;
                             }
                         }
                     }
+                }
                 }
             }
 
@@ -138,18 +138,18 @@ namespace Backend.Services
                 }
                 
                 return new EnrichedCosmetic
-                {
-                    Id = c.Id,
-                    Name = c.Name,
-                    Type = c.Type,
-                    Rarity = c.Rarity,
-                    Images = c.Images,
-                    Added = c.Added,
-                    IsNew = newCosmeticIds.Contains(c.Id),
-                    IsInShop = shopCosmeticIds.Contains(c.Id),
+            {
+                Id = c.Id,
+                Name = c.Name,
+                Type = c.Type,
+                Rarity = c.Rarity,
+                Images = c.Images,
+                Added = c.Added,
+                IsNew = newCosmeticIds.Contains(c.Id),
+                IsInShop = shopCosmeticIds.Contains(c.Id),
                     IsOwned = userId.HasValue && ownedCosmeticIds.Contains(c.Id),
-                    IsOnSale = shopCosmetics.ContainsKey(c.Id) && 
-                              shopCosmetics[c.Id].FinalPrice < shopCosmetics[c.Id].RegularPrice,
+                IsOnSale = shopCosmetics.ContainsKey(c.Id) && 
+                          shopCosmetics[c.Id].FinalPrice < shopCosmetics[c.Id].RegularPrice,
                     Price = finalPrice,
                     RegularPrice = regularPrice,
                     IsBundle = isBundle,

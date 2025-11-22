@@ -1,9 +1,28 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5155/api/ControllerCosmeticsEnriched';
+// Helper para obter a URL base da API
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) {
+    // Se for relativa (começa com /), usar como está
+    if (envUrl.startsWith('/')) {
+      return envUrl;
+    }
+    // Se for absoluta, usar diretamente
+    return envUrl;
+  }
+  // Fallback para desenvolvimento local
+  return 'http://localhost:5155/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
+// Se for URL relativa, adicionar o endpoint completo
+const COSMETICS_ENDPOINT = API_BASE_URL.startsWith('/') 
+  ? `${API_BASE_URL}/ControllerCosmeticsEnriched`
+  : `${API_BASE_URL}/ControllerCosmeticsEnriched`;
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: COSMETICS_ENDPOINT,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,9 +31,17 @@ const api = axios.create({
 // Interceptor para adicionar userId nos headers quando disponível
 api.interceptors.request.use(
   (config) => {
-    const userId = localStorage.getItem('userId');
-    if (userId) {
-      config.headers['X-User-Id'] = userId;
+    // Só adicionar se não foi explicitamente definido nos headers da requisição
+    // Verificar tanto no objeto headers quanto no método hasOwnProperty
+    if (!config.headers['X-User-Id'] && !config.headers.hasOwnProperty('X-User-Id')) {
+      const userId = localStorage.getItem('userId');
+      if (userId) {
+        // Garantir que seja string
+        config.headers['X-User-Id'] = userId.toString();
+        console.log('Interceptor adicionou X-User-Id:', userId.toString());
+      }
+    } else {
+      console.log('X-User-Id já está definido nos headers:', config.headers['X-User-Id']);
     }
     return config;
   },
@@ -128,7 +155,7 @@ export const cosmeticsAPI = {
     }
     
     console.log('Requisição para API /search:', {
-      url: `${API_BASE_URL}/search`,
+      url: `${COSMETICS_ENDPOINT}/search`,
       params: params,
       paramsString: new URLSearchParams(params).toString()
     });
@@ -243,15 +270,50 @@ export const cosmeticsAPI = {
   // Comprar cosmético
   purchaseCosmetic: async (cosmeticId, price, cosmeticName, userId) => {
     try {
+      // Garantir que userId seja um número
+      const userIdNum = userId ? (typeof userId === 'string' ? parseInt(userId, 10) : userId) : null;
+      
+      // Se não tiver userId, tentar pegar do localStorage
+      let finalUserId = userIdNum;
+      if (!finalUserId) {
+        const storedUserId = localStorage.getItem('userId');
+        if (storedUserId) {
+          finalUserId = parseInt(storedUserId, 10);
+          console.log('UserId obtido do localStorage:', finalUserId);
+        }
+      }
+      
+      if (!finalUserId) {
+        throw new Error('UserId não encontrado. É necessário estar logado para comprar cosméticos.');
+      }
+      
+      console.log('Enviando compra com userId:', finalUserId, 'tipo:', typeof finalUserId);
+      console.log('Headers que serão enviados:', { 
+        'X-User-Id': finalUserId.toString(),
+        'Content-Type': 'application/json'
+      });
+      
+      // Garantir que o header seja enviado corretamente (número como string)
+      // Usar headers explícitos que sobrescrevem o interceptor
       const response = await api.post(`/purchase/${cosmeticId}`, { 
         price: Number(price) || 0,
         cosmeticName: cosmeticName || cosmeticId
       }, {
-        headers: userId ? { 'X-User-Id': userId } : {}
+        headers: { 
+          'X-User-Id': finalUserId.toString(),
+          'Content-Type': 'application/json'
+        }
       });
+      
+      console.log('Resposta da compra recebida:', response.data);
+      console.log('Status da resposta:', response.status);
       return response.data;
     } catch (error) {
       console.error('Erro ao comprar cosmético:', error);
+      // Se for um erro 400 (BadRequest), retornar a resposta do servidor
+      if (error.response && error.response.status === 400) {
+        return error.response.data;
+      }
       throw error;
     }
   },
@@ -309,7 +371,7 @@ export const cosmeticsAPI = {
   // Devolver cosmético
   refundCosmetic: async (cosmeticId, cosmeticName, userId) => {
     try {
-      const response = await api.post(`http://localhost:5155/api/transactions/refund/${cosmeticId}`, {
+      const response = await axios.post(`${API_BASE_URL}/transactions/refund/${cosmeticId}`, {
         cosmeticName: cosmeticName || cosmeticId
       }, {
         headers: userId ? { 'X-User-Id': userId } : {}
@@ -324,7 +386,7 @@ export const cosmeticsAPI = {
   // Comprar bundle
   purchaseBundle: async (cosmetics, userId) => {
     try {
-      const response = await axios.post('http://localhost:5155/api/bundles/purchase', {
+      const response = await axios.post(`${API_BASE_URL}/bundles/purchase`, {
         cosmetics: cosmetics
       }, {
         headers: {

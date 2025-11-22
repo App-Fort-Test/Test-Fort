@@ -22,6 +22,8 @@
         :key="transaction.id"
         class="transaction-item"
         :class="transaction.type"
+        @click="openCosmeticDetails(transaction)"
+        style="cursor: pointer;"
       >
         <div class="transaction-icon">
           <svg v-if="isPurchase(transaction)" width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -52,22 +54,38 @@
         </div>
       </div>
     </div>
+
+
+    <BaseModal v-if="selectedCosmetic" @close="closeCosmeticDetails">
+      <CosmeticDetailsModal 
+        :cosmetic="selectedCosmetic" 
+        @close="closeCosmeticDetails"
+        @refund-success="handleRefundSuccess"
+      />
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onActivated, watch, onUnmounted } from 'vue';
 import { transactionsService } from '../../services/transactions';
 import { useAuth } from '../../composables/useAuth';
+import { useTransactions } from '../../composables/useTransactions';
+import BaseModal from '../Modal/User/BaseModal.vue';
+import CosmeticDetailsModal from '../Modal/Cosmetics/CosmeticDetailsModal.vue';
+import { fortniteExternalAPI } from '../../services/fortniteApi';
 
 const { user } = useAuth();
+const { transactionUpdateEvent } = useTransactions();
 const transactions = ref([]);
 const loading = ref(false);
 const error = ref(null);
+const selectedCosmetic = ref(null);
 
-const loadHistory = async () => {
+const loadHistory = async (forceRefresh = false) => {
   if (!user.value) {
     error.value = 'É necessário estar logado para ver o histórico';
+    transactions.value = [];
     return;
   }
 
@@ -75,12 +93,25 @@ const loadHistory = async () => {
   error.value = null;
 
   try {
+    console.log('Carregando histórico de transações para usuário:', user.value.id);
     const data = await transactionsService.getHistory(user.value.id);
-    // O backend retorna uma lista diretamente ou um objeto com transactions
-    transactions.value = Array.isArray(data) ? data : (data.transactions || []);
+    console.log('Dados recebidos do histórico:', data);
+    
+    // O backend retorna um objeto com transactions
+    if (data && data.transactions && Array.isArray(data.transactions)) {
+      transactions.value = data.transactions;
+      console.log('Transações carregadas:', transactions.value.length);
+    } else if (Array.isArray(data)) {
+      transactions.value = data;
+      console.log('Transações carregadas (array direto):', transactions.value.length);
+    } else {
+      console.warn('Formato de dados inesperado:', data);
+      transactions.value = [];
+    }
   } catch (err) {
     console.error('Erro ao carregar histórico:', err);
-    error.value = err.response?.data?.message || 'Erro ao carregar histórico';
+    error.value = err.response?.data?.message || err.message || 'Erro ao carregar histórico';
+    transactions.value = [];
   } finally {
     loading.value = false;
   }
@@ -99,7 +130,7 @@ const formatDate = (dateString) => {
 };
 
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('pt-BR').format(value);
+  return new Intl.NumberFormat('pt-BR').format(value) + ' V-Bucks';
 };
 
 // Verificar se é compra (Purchase = 1 ou 'purchase' ou 'Purchase')
@@ -113,8 +144,192 @@ const getTransactionTypeClass = (transaction) => {
   return isPurchase(transaction) ? 'purchase' : 'refund';
 };
 
+// Abrir modal de detalhes do cosmético
+const openCosmeticDetails = async (transaction) => {
+  try {
+    const cosmeticId = transaction.cosmeticId || transaction.cosmeticName;
+    if (!cosmeticId) return;
+    
+  
+    const cosmeticsResponse = await fortniteExternalAPI.getCosmetics();
+    if (cosmeticsResponse && cosmeticsResponse.data && cosmeticsResponse.data.br) {
+      const cosmetic = cosmeticsResponse.data.br.find(c => c.id === cosmeticId);
+      if (cosmetic) {
+       
+        const [newCosmeticsResponse, shopResponse] = await Promise.all([
+          fortniteExternalAPI.getNewCosmetics().catch(() => null),
+          fortniteExternalAPI.getShop().catch(() => null)
+        ]);
+        
+        const newCosmeticIds = new Set();
+        if (newCosmeticsResponse?.data?.items?.br) {
+          newCosmeticsResponse.data.items.br.forEach(c => {
+            if (c.id) newCosmeticIds.add(c.id);
+          });
+        }
+        
+        const shopCosmetics = new Map();
+        if (shopResponse?.data?.entries) {
+          shopResponse.data.entries.forEach(entry => {
+            if (entry.brItems) {
+              entry.brItems.forEach(item => {
+                if (item.id) {
+                  shopCosmetics.set(item.id, entry);
+                }
+              });
+            }
+          });
+        }
+        
+
+        const { cosmeticsAPI } = await import('../../services/api');
+        let isOwned = false;
+        if (user.value?.id) {
+          try {
+            const inventory = await cosmeticsAPI.getInventory(user.value.id, false);
+            if (inventory && inventory.ownedCosmetics) {
+              const ownedIds = new Set(
+                inventory.ownedCosmetics.map(c => typeof c === 'string' ? c : (c.cosmeticId || c.id))
+              );
+              isOwned = ownedIds.has(cosmeticId);
+            }
+          } catch (err) {
+            console.warn('Erro ao verificar se possui o cosmético:', err);
+          }
+        }
+        
+  
+        const enrichedCosmetic = {
+          id: cosmetic.id,
+          name: cosmetic.name,
+          type: cosmetic.type || { value: '', displayValue: '' },
+          rarity: cosmetic.rarity || { value: 'common', displayValue: 'Common' },
+          images: cosmetic.images || { smallIcon: '', icon: '', featured: '' },
+          added: cosmetic.added ? new Date(cosmetic.added) : new Date(),
+          isNew: newCosmeticIds.has(cosmetic.id),
+          isInShop: shopCosmetics.has(cosmetic.id),
+          isOwned: isOwned,
+          isOnSale: shopCosmetics.has(cosmetic.id) && 
+                   shopCosmetics.get(cosmetic.id).finalPrice < shopCosmetics.get(cosmetic.id).regularPrice,
+          price: shopCosmetics.has(cosmetic.id) ? shopCosmetics.get(cosmetic.id).finalPrice : (Math.abs(transaction.amount || transaction.Amount) || 0),
+          regularPrice: shopCosmetics.has(cosmetic.id) ? shopCosmetics.get(cosmetic.id).regularPrice : (Math.abs(transaction.amount || transaction.Amount) || 0),
+          isBundle: false,
+          bundleItems: null
+        };
+        
+        selectedCosmetic.value = enrichedCosmetic;
+      } else {
+        // Se não encontrou na API externa, criar objeto básico
+        selectedCosmetic.value = {
+          id: cosmeticId,
+          name: transaction.cosmeticName || cosmeticId,
+          type: { value: '', displayValue: '' },
+          rarity: { value: 'common', displayValue: 'Common' },
+          images: { smallIcon: '', icon: '', featured: '' },
+          added: new Date(),
+          isNew: false,
+          isInShop: false,
+          isOwned: !isPurchase(transaction), // Se não é compra, pode não possuir mais
+          isOnSale: false,
+          price: Math.abs(transaction.amount || transaction.Amount) || 0,
+          regularPrice: Math.abs(transaction.amount || transaction.Amount) || 0,
+          isBundle: false,
+          bundleItems: null
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao buscar detalhes do cosmético:', error);
+
+    selectedCosmetic.value = {
+      id: transaction.cosmeticId || transaction.cosmeticName,
+      name: transaction.cosmeticName || transaction.cosmeticId,
+      type: { value: '', displayValue: '' },
+      rarity: { value: 'common', displayValue: 'Common' },
+      images: { smallIcon: '', icon: '', featured: '' },
+      added: new Date(),
+      isNew: false,
+      isInShop: false,
+      isOwned: !isPurchase(transaction),
+      isOnSale: false,
+      price: Math.abs(transaction.amount || transaction.Amount) || 0,
+      regularPrice: Math.abs(transaction.amount || transaction.Amount) || 0,
+      isBundle: false,
+      bundleItems: null
+    };
+  }
+};
+
+const closeCosmeticDetails = () => {
+  selectedCosmetic.value = null;
+};
+
+
+const handleRefundSuccess = async () => {
+
+  closeCosmeticDetails();
+
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  await loadHistory(true);
+};
+
+let pollingInterval = null;
+
 onMounted(() => {
-  loadHistory();
+  console.log('TransactionHistory montado, carregando histórico...');
+  loadHistory(true);
+  
+  if (user.value?.id) {
+    pollingInterval = setInterval(() => {
+      loadHistory(true);
+    }, 5000);
+  }
+});
+
+onActivated(() => {
+  console.log('TransactionHistory ativado, recarregando histórico...');
+  loadHistory(true);
+  
+  if (user.value?.id && !pollingInterval) {
+    pollingInterval = setInterval(() => {
+      loadHistory(true);
+    }, 5000);
+  }
+});
+
+onUnmounted(() => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+});
+
+watch(() => user.value?.id, (newUserId, oldUserId) => {
+  if (newUserId && newUserId !== oldUserId) {
+    console.log('Usuário mudou, recarregando histórico...');
+    loadHistory(true);
+    
+    if (pollingInterval) {
+      clearInterval(pollingInterval);
+    }
+    
+    if (newUserId) {
+      pollingInterval = setInterval(() => {
+        loadHistory(true);
+      }, 5000);
+    }
+  } else if (!newUserId && pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+});
+
+watch(() => transactionUpdateEvent.value, () => {
+  if (user.value?.id) {
+    console.log('Evento de atualização de transação detectado, recarregando histórico imediatamente...');
+    loadHistory(true);
+  }
 });
 </script>
 

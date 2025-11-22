@@ -19,7 +19,8 @@ namespace Backend.Controllers
         [HttpGet]
         public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
         {
-            var users = await _context.Users
+            // Otimização: buscar usuários e contagem de cosméticos em paralelo
+            var usersQuery = _context.Users
                 .OrderByDescending(u => u.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -27,16 +28,46 @@ namespace Backend.Controllers
                 {
                     id = u.Id,
                     username = u.Username,
-                    createdAt = u.CreatedAt,
-                    totalCosmetics = u.OwnedCosmetics.Count
-                })
-                .ToListAsync();
-                
-            var totalUsers = await _context.Users.CountAsync();
+                    createdAt = u.CreatedAt
+                });
+            
+            var totalUsersQuery = _context.Users.CountAsync();
+            
+            // Executar queries em paralelo
+            var usersTask = usersQuery.ToListAsync();
+            var totalUsersTask = totalUsersQuery;
+            
+            await Task.WhenAll(usersTask, totalUsersTask);
+            
+            var users = await usersTask;
+            var totalUsers = await totalUsersTask;
+            
+            // Buscar contagem de cosméticos e transações apenas para os usuários da página atual (mais eficiente)
+            var userIds = users.Select(u => u.id).ToList();
+            var cosmeticsCounts = await _context.UserCosmetics
+                .Where(uc => userIds.Contains(uc.UserId))
+                .GroupBy(uc => uc.UserId)
+                .Select(g => new { userId = g.Key, count = g.Count() })
+                .ToDictionaryAsync(x => x.userId, x => x.count);
+            
+            var transactionsCounts = await _context.Transactions
+                .Where(t => userIds.Contains(t.UserId))
+                .GroupBy(t => t.UserId)
+                .Select(g => new { userId = g.Key, count = g.Count() })
+                .ToDictionaryAsync(x => x.userId, x => x.count);
+            
+            var usersWithCounts = users.Select(u => new
+            {
+                id = u.id,
+                username = u.username,
+                createdAt = u.createdAt,
+                totalCosmetics = cosmeticsCounts.ContainsKey(u.id) ? cosmeticsCounts[u.id] : 0,
+                totalTransactions = transactionsCounts.ContainsKey(u.id) ? transactionsCounts[u.id] : 0
+            }).ToList();
             
             return Ok(new
             {
-                users = users,
+                users = usersWithCounts,
                 totalCount = totalUsers,
                 page = page,
                 pageSize = pageSize,

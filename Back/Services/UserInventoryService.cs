@@ -38,13 +38,11 @@ namespace Backend.Services
             var user = await _context.Users.FindAsync(userId);
             if (user == null) return false;
             
-            // Verificar se já possui o cosmético
             if (await IsOwnedAsync(userId, cosmeticId))
             {
                 return false;
             }
             
-            // Verificar se tem créditos suficientes
             if (user.Vbucks < price)
             {
                 return false;
@@ -120,6 +118,49 @@ namespace Backend.Services
                 .Where(t => t.UserId == userId)
                 .OrderByDescending(t => t.CreatedAt)
                 .ToListAsync();
+        }
+        
+        // Obter itens possuídos baseado nas transações (compras - devoluções)
+        public async Task<List<string>> GetOwnedCosmeticsFromTransactionsAsync(int userId)
+        {
+            var transactions = await _context.Transactions
+                .Where(t => t.UserId == userId)
+                .OrderBy(t => t.CreatedAt)
+                .ToListAsync();
+            
+            // Dicionário para contar quantas vezes cada cosmético foi comprado/devolvido
+            var cosmeticCounts = new Dictionary<string, int>();
+            
+            foreach (var transaction in transactions)
+            {
+                if (string.IsNullOrEmpty(transaction.CosmeticId))
+                    continue;
+                
+                if (transaction.Type == TransactionType.Purchase)
+                {
+                    // Compra incrementa o contador
+                    if (!cosmeticCounts.ContainsKey(transaction.CosmeticId))
+                    {
+                        cosmeticCounts[transaction.CosmeticId] = 0;
+                    }
+                    cosmeticCounts[transaction.CosmeticId]++;
+                }
+                else if (transaction.Type == TransactionType.Refund)
+                {
+                    // Devolução decrementa o contador
+                    if (cosmeticCounts.ContainsKey(transaction.CosmeticId))
+                    {
+                        cosmeticCounts[transaction.CosmeticId]--;
+                        if (cosmeticCounts[transaction.CosmeticId] <= 0)
+                        {
+                            cosmeticCounts.Remove(transaction.CosmeticId);
+                        }
+                    }
+                }
+            }
+            
+            // Retornar apenas os cosméticos com contador > 0 (ainda possuídos)
+            return cosmeticCounts.Keys.ToList();
         }
         
         public async Task<bool> PurchaseBundleAsync(int userId, List<(string CosmeticId, string CosmeticName, int Price)> cosmetics)

@@ -29,6 +29,11 @@
           </tr>
         </thead>
         <tbody>
+          <tr v-if="users.length === 0 && !loading" class="no-users-row">
+            <td colspan="6" class="no-users-message">
+              Nenhum usuário encontrado.
+            </td>
+          </tr>
           <template v-for="user in users" :key="user.id">
             <tr 
               :class="{ 'is-expanded': expandedUser === user.id }"
@@ -37,7 +42,7 @@
             >
               <td class="user-name">{{ user.name }}</td>
               <td class="user-email">{{ formatDate(user.createdAt) }}</td>
-              <td class="transaction-count">{{ user.transactions?.length || 0 }}</td>
+              <td class="transaction-count">{{ user.totalTransactions || 0 }}</td>
               <td class="items-cell" @click.stop>
                 <button 
                   class="items-button"
@@ -46,7 +51,7 @@
                   {{ user.totalCosmetics || 0 }} itens
                 </button>
               </td>
-              <td class="total-value">-</td>
+              <td class="total-value">{{ formatCurrency(user.totalValue || 0) }}</td>
               <td class="expand-cell" @click.stop>
                 <button 
                   class="expand-button"
@@ -76,7 +81,7 @@
               <td colspan="6" class="transactions-cell">
                 <div class="transactions-container">
                   <h3 class="transactions-title">Transações de {{ user.name }}</h3>
-                  <div v-if="user.transactions.length === 0" class="no-transactions">
+                  <div v-if="!user.transactions || user.transactions.length === 0" class="no-transactions">
                     Nenhuma transação encontrada.
                   </div>
                   <div v-else class="transactions-list">
@@ -88,7 +93,7 @@
                       <div class="transaction-info">
                         <span class="transaction-date">{{ formatDate(transaction.date) }}</span>
                         <span class="transaction-type" :class="`type-${transaction.type}`">
-                          {{ transaction.type === 'purchase' ? 'Compra' : 'Venda' }}
+                          {{ transaction.type === 'purchase' ? 'Compra' : 'Devolução' }}
                         </span>
                         <span class="transaction-item-name">{{ transaction.itemName }}</span>
                       </div>
@@ -120,10 +125,10 @@
             <p class="user-card-email">{{ user.email }}</p>
           </div>
           <div class="user-card-stats">
-            <div class="stat-item">
-              <span class="stat-label">Transações</span>
-              <span class="stat-value">{{ user.transactions.length }}</span>
-            </div>
+                <div class="stat-item">
+                  <span class="stat-label">Transações</span>
+                  <span class="stat-value">{{ user.totalTransactions || 0 }}</span>
+                </div>
             <div class="stat-item">
               <span class="stat-label">Itens</span>
               <button class="items-button-mobile" @click.stop="openItemsModal(user)">
@@ -153,19 +158,19 @@
 
         <div v-if="expandedUser === user.id" class="user-card-transactions">
           <h4 class="transactions-title">Transações</h4>
-          <div v-if="user.transactions.length === 0" class="no-transactions">
-            Nenhuma transação encontrada.
-          </div>
-          <div v-else class="transactions-list">
-            <div 
-              v-for="transaction in user.transactions" 
-              :key="transaction.id"
-              class="transaction-item"
-            >
+                  <div v-if="!user.transactions || user.transactions.length === 0" class="no-transactions">
+                    Nenhuma transação encontrada.
+                  </div>
+                  <div v-else class="transactions-list">
+                    <div 
+                      v-for="transaction in user.transactions" 
+                      :key="transaction.id"
+                      class="transaction-item"
+                    >
               <div class="transaction-info">
                 <span class="transaction-date">{{ formatDate(transaction.date) }}</span>
                 <span class="transaction-type" :class="`type-${transaction.type}`">
-                  {{ transaction.type === 'purchase' ? 'Compra' : 'Venda' }}
+                  {{ transaction.type === 'purchase' ? 'Compra' : 'Devolução' }}
                 </span>
                 <span class="transaction-item-name">{{ transaction.itemName }}</span>
               </div>
@@ -225,47 +230,68 @@
         <div v-if="filteredItems.length === 0" class="no-items">
           Nenhum item encontrado com os filtros aplicados.
         </div>
-        <div v-else class="items-grid">
-          <div 
-            v-for="item in filteredItems" 
-            :key="item.id"
-            class="item-card-mini"
-            :class="`rarity-${item.rarity}`"
-          >
-            <div class="card-header-mini">
-              <div class="date-tag-mini" :style="{ backgroundImage: `url(${getFundoImage(item.rarity)})` }">
-                {{ formatDate(item.dateAdded || '2024-01-15') }}
-              </div>
-              <div class="rarity-tag-mini">{{ getRarityLabel(item.rarity) }}</div>
-            </div>
-
-            <div class="image-container-mini">
-              <img 
-                :src="item.image || '/src/assets/png/amostracard.png'" 
-                :alt="item.name"
-                class="item-image-mini"
-                @error="handleImageError"
-              />
-              <div class="overlay-tags-mini">
-                <div class="price-badge-mini">{{ item.type }}</div>
-              </div>
-            </div>
-
-            <div class="info-section-mini">
-              <div class="item-name-mini">{{ item.name }}</div>
-            </div>
-          </div>
+        <div v-else class="items-table-wrapper">
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="col-image">Imagem</th>
+                <th class="col-name">Nome</th>
+                <th class="col-type">Tipo</th>
+                <th class="col-rarity">Raridade</th>
+                <th class="col-date">Data</th>
+                <th class="col-price">Preço</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr 
+                v-for="item in filteredItems" 
+                :key="item.id"
+                class="item-row"
+                @click="openCosmeticDetails(item)"
+              >
+                <td class="col-image">
+                  <img 
+                    :src="item.image || '/src/assets/png/amostracard.png'" 
+                    :alt="item.name"
+                    class="item-image-table"
+                    @error="handleImageError"
+                  />
+                </td>
+                <td class="col-name">
+                  <span class="item-name-link">{{ item.name }}</span>
+                </td>
+                <td class="col-type">{{ item.type || '-' }}</td>
+                <td class="col-rarity">
+                  <span class="rarity-badge" :class="`rarity-${item.rarity}`">
+                    {{ getRarityLabel(item.rarity) }}
+                  </span>
+                </td>
+                <td class="col-date">{{ formatDate(item.dateAdded || '2024-01-15') }}</td>
+                <td class="col-price">{{ formatCurrency(item.purchasePrice || 0) }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
+    </BaseModal>
+
+    <!-- Modal de Detalhes do Cosmético -->
+    <BaseModal v-if="selectedCosmetic" @close="closeCosmeticDetails">
+      <CosmeticDetailsModal 
+        :cosmetic="selectedCosmetic" 
+        @close="closeCosmeticDetails"
+      />
     </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onActivated, watch, nextTick } from 'vue';
 import { usersService } from '../../services/users';
 import { transactionsService } from '../../services/transactions';
 import BaseModal from '../Modal/User/BaseModal.vue';
+import CosmeticDetailsModal from '../Modal/Cosmetics/CosmeticDetailsModal.vue';
+import { fortniteExternalAPI } from '../../services/fortniteApi';
 import fundoComum from '../../assets/svg/fundocomum.svg';
 import fundoIncomum from '../../assets/svg/fundoincomum.svg';
 import fundoRaro from '../../assets/svg/fundoraro.svg';
@@ -285,25 +311,125 @@ const pageSize = ref(20);
 const totalPages = ref(1);
 const userCosmetics = ref({}); // Cache de cosméticos por usuário
 const userTransactions = ref({}); // Cache de transações por usuário
+const userTotalValues = ref({}); // Cache de valores totais por usuário
+const selectedCosmetic = ref(null);
 
 // Carregar usuários (com cache automático)
 const loadUsers = async (forceRefresh = false) => {
+  // Evitar múltiplas chamadas simultâneas
+  if (isLoadingUsers.value && !forceRefresh) {
+    console.log('Já está carregando usuários, aguardando...');
+    return;
+  }
+  
+  isLoadingUsers.value = true;
+  
+  // Tentar carregar do cache primeiro para mostrar imediatamente
+  if (!forceRefresh) {
+    const cacheKey = `fortnite_users_${currentPage.value}-${pageSize.value}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        const now = Date.now();
+        if (now - cacheData.timestamp < 10 * 60 * 1000) {
+          const data = cacheData.data;
+          if (data && data.users && Array.isArray(data.users)) {
+            users.value = data.users.map(u => ({
+              id: u.id,
+              name: u.username,
+              email: '',
+              totalCosmetics: u.totalCosmetics || 0,
+              totalTransactions: u.totalTransactions || 0, // Total de transações do backend
+              createdAt: u.createdAt,
+              items: [],
+              transactions: [], // Inicializar como array vazio (será carregado quando expandir)
+              totalValue: 0 // Será calculado depois
+            }));
+            
+            // Calcular valores totais para cada usuário em paralelo
+            await Promise.all(users.value.map(async (user) => {
+              user.totalValue = await calculateUserTotalValue(user.id);
+            }));
+            totalPages.value = data.totalPages || 1;
+            loading.value = false; // Mostrar dados do cache imediatamente
+            console.log('Usuários carregados do cache:', users.value.length);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar do cache:', e);
+    }
+  }
+  
+  // Buscar dados atualizados em background
   loading.value = true;
   try {
+    console.log('Buscando usuários da API...', { page: currentPage.value, pageSize: pageSize.value, forceRefresh });
     const data = await usersService.getUsers(currentPage.value, pageSize.value, forceRefresh);
-    users.value = data.users.map(u => ({
-      id: u.id,
-      name: u.username,
-      email: '', // Não expor email por segurança
-      totalCosmetics: u.totalCosmetics,
-      createdAt: u.createdAt,
-      items: []
-    }));
-    totalPages.value = data.totalPages;
+    console.log('Dados recebidos da API:', data);
+    
+    if (data && data.users && Array.isArray(data.users)) {
+          users.value = data.users.map(u => ({
+            id: u.id,
+            name: u.username,
+            email: '', // Não expor email por segurança
+            totalCosmetics: u.totalCosmetics || 0,
+            totalTransactions: u.totalTransactions || 0, // Total de transações do backend
+            createdAt: u.createdAt,
+            items: [],
+            transactions: [], // Inicializar como array vazio (será carregado quando expandir)
+            totalValue: 0 // Será calculado depois
+          }));
+      totalPages.value = data.totalPages || 1;
+      console.log('Usuários processados:', users.value.length, 'Total de páginas:', totalPages.value);
+      
+      // Calcular valores totais para cada usuário em paralelo
+      await Promise.all(users.value.map(async (user) => {
+        user.totalValue = await calculateUserTotalValue(user.id);
+      }));
+    } else {
+      console.warn('Dados inválidos recebidos:', data);
+      users.value = [];
+      totalPages.value = 1;
+    }
   } catch (error) {
     console.error('Erro ao carregar usuários:', error);
+    console.error('Detalhes do erro:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    // Manter dados do cache se houver erro
+    if (users.value.length === 0) {
+      users.value = [];
+      totalPages.value = 1;
+    }
   } finally {
     loading.value = false;
+    isLoadingUsers.value = false;
+  }
+};
+
+// Calcular valor total dos itens possuídos por um usuário
+const calculateUserTotalValue = async (userId) => {
+  // Verificar cache primeiro
+  if (userTotalValues.value[userId] !== undefined) {
+    return userTotalValues.value[userId];
+  }
+  
+  try {
+    // Buscar todos os cosméticos do usuário (sem paginação para calcular o total)
+    const data = await usersService.getUserCosmetics(userId, 1, 10000, false);
+    if (data && data.cosmetics && Array.isArray(data.cosmetics)) {
+      const total = data.cosmetics.reduce((sum, c) => sum + (c.purchasePrice || 0), 0);
+      userTotalValues.value[userId] = total;
+      return total;
+    }
+    return 0;
+  } catch (error) {
+    console.error('Erro ao calcular valor total do usuário:', error);
+    return 0;
   }
 };
 
@@ -316,13 +442,42 @@ const loadUserCosmetics = async (userId, forceRefresh = false) => {
   
   try {
     const data = await usersService.getUserCosmetics(userId, 1, 100, forceRefresh);
-    userCosmetics.value[userId] = data.cosmetics.map(c => ({
-      id: c.cosmeticId,
-      name: c.cosmeticId, // Será substituído quando tivermos detalhes do cosmético
-      cosmeticId: c.cosmeticId,
-      dateAdded: c.acquiredAt,
-      purchasePrice: c.purchasePrice
-    }));
+    
+    // Buscar detalhes completos dos cosméticos da API externa
+    let cosmeticsDetails = new Map();
+    try {
+      const cosmeticsResponse = await fortniteExternalAPI.getCosmetics();
+      if (cosmeticsResponse && cosmeticsResponse.data && cosmeticsResponse.data.br) {
+        cosmeticsResponse.data.br.forEach(c => {
+          cosmeticsDetails.set(c.id, c);
+        });
+      }
+    } catch (err) {
+      console.warn('Erro ao buscar detalhes dos cosméticos:', err);
+    }
+    
+    userCosmetics.value[userId] = data.cosmetics.map(c => {
+      const cosmeticDetail = cosmeticsDetails.get(c.cosmeticId);
+      return {
+        id: c.cosmeticId,
+        name: cosmeticDetail?.name || c.cosmeticId,
+        cosmeticId: c.cosmeticId,
+        type: cosmeticDetail?.type?.displayValue || cosmeticDetail?.type?.value || '-',
+        rarity: cosmeticDetail?.rarity?.value || 'common',
+        image: cosmeticDetail?.images?.icon || cosmeticDetail?.images?.smallIcon || '/src/assets/png/amostracard.png',
+        dateAdded: c.acquiredAt,
+        purchasePrice: c.purchasePrice
+      };
+    });
+    
+    // Atualizar valor total do usuário
+    const total = userCosmetics.value[userId].reduce((sum, c) => sum + (c.purchasePrice || 0), 0);
+    userTotalValues.value[userId] = total;
+    const user = users.value.find(u => u.id === userId);
+    if (user) {
+      user.totalValue = total;
+    }
+    
     return userCosmetics.value[userId];
   } catch (error) {
     console.error('Erro ao carregar cosméticos do usuário:', error);
@@ -332,28 +487,76 @@ const loadUserCosmetics = async (userId, forceRefresh = false) => {
 
 // Carregar transações de um usuário
 const loadUserTransactions = async (userId) => {
+  // Sempre buscar transações do usuário específico, não usar cache para garantir dados corretos
+  // Remover do cache se existir para forçar nova busca
   if (userTransactions.value[userId]) {
-    return userTransactions.value[userId];
+    delete userTransactions.value[userId];
   }
   
   try {
+    console.log(`Carregando transações para usuário ${userId} (tipo: ${typeof userId})`);
     const data = await transactionsService.getHistory(userId);
-    userTransactions.value[userId] = data.transactions.map(t => ({
-      id: t.id,
-      date: t.createdAt,
-      type: t.type.toLowerCase(),
-      itemName: t.cosmeticName,
-      value: Math.abs(t.amount)
-    }));
-    return userTransactions.value[userId];
+    console.log(`Transações recebidas para usuário ${userId}:`, data.transactions?.length || 0);
+    
+    if (data && data.transactions && Array.isArray(data.transactions)) {
+      userTransactions.value[userId] = data.transactions.map(t => ({
+        id: t.id,
+        date: t.createdAt,
+        type: t.type.toLowerCase(),
+        itemName: t.cosmeticName,
+        value: Math.abs(t.amount)
+      }));
+      console.log(`Transações processadas para usuário ${userId}:`, userTransactions.value[userId].length);
+      return userTransactions.value[userId];
+    } else {
+      console.warn(`Nenhuma transação encontrada para usuário ${userId}`);
+      userTransactions.value[userId] = [];
+      return [];
+    }
   } catch (error) {
-    console.error('Erro ao carregar transações do usuário:', error);
+    console.error(`Erro ao carregar transações do usuário ${userId}:`, error);
+    console.error('Detalhes do erro:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    userTransactions.value[userId] = [];
     return [];
   }
 };
 
-onMounted(() => {
-  loadUsers();
+// Flag para evitar múltiplas chamadas simultâneas
+const isLoadingUsers = ref(false);
+
+onMounted(async () => {
+  console.log('UsersTable montado, carregando usuários...');
+  // Sempre carregar quando o componente for montado
+  if (!isLoadingUsers.value) {
+    isLoadingUsers.value = true;
+    try {
+      await loadUsers(true); // Forçar refresh para garantir que carregue
+    } catch (error) {
+      console.error('Erro ao carregar usuários no onMounted:', error);
+    } finally {
+      isLoadingUsers.value = false;
+    }
+  }
+});
+
+// Recarregar quando o componente for ativado (útil para navegação)
+onActivated(async () => {
+  console.log('UsersTable ativado, verificando se precisa recarregar...');
+  // Sempre recarregar quando o componente for ativado
+  if (!isLoadingUsers.value) {
+    isLoadingUsers.value = true;
+    try {
+      await loadUsers(true);
+    } catch (error) {
+      console.error('Erro ao carregar usuários no onActivated:', error);
+    } finally {
+      isLoadingUsers.value = false;
+    }
+  }
 });
 
 const toggleUser = async (userId) => {
@@ -384,6 +587,106 @@ const closeItemsModal = () => {
   searchQuery.value = '';
   filterType.value = '';
   filterRarity.value = '';
+};
+
+// Abrir modal de detalhes do cosmético
+const openCosmeticDetails = async (item) => {
+  try {
+    // Buscar detalhes completos do cosmético pela API externa
+    const cosmeticsResponse = await fortniteExternalAPI.getCosmetics();
+    if (cosmeticsResponse && cosmeticsResponse.data && cosmeticsResponse.data.br) {
+      const cosmetic = cosmeticsResponse.data.br.find(c => c.id === item.cosmeticId || c.id === item.id);
+      if (cosmetic) {
+        // Enriquecer com dados do inventário e shop
+        const [newCosmeticsResponse, shopResponse] = await Promise.all([
+          fortniteExternalAPI.getNewCosmetics().catch(() => null),
+          fortniteExternalAPI.getShop().catch(() => null)
+        ]);
+        
+        const newCosmeticIds = new Set();
+        if (newCosmeticsResponse?.data?.items?.br) {
+          newCosmeticsResponse.data.items.br.forEach(c => {
+            if (c.id) newCosmeticIds.add(c.id);
+          });
+        }
+        
+        const shopCosmetics = new Map();
+        if (shopResponse?.data?.entries) {
+          shopResponse.data.entries.forEach(entry => {
+            if (entry.brItems) {
+              entry.brItems.forEach(item => {
+                if (item.id) {
+                  shopCosmetics.set(item.id, entry);
+                }
+              });
+            }
+          });
+        }
+        
+        // Criar objeto enriquecido
+        const enrichedCosmetic = {
+          id: cosmetic.id,
+          name: cosmetic.name,
+          type: cosmetic.type || { value: '', displayValue: '' },
+          rarity: cosmetic.rarity || { value: 'common', displayValue: 'Common' },
+          images: cosmetic.images || { smallIcon: '', icon: '', featured: '' },
+          added: cosmetic.added ? new Date(cosmetic.added) : new Date(),
+          isNew: newCosmeticIds.has(cosmetic.id),
+          isInShop: shopCosmetics.has(cosmetic.id),
+          isOwned: true, // Sempre true pois está no inventário do usuário
+          isOnSale: shopCosmetics.has(cosmetic.id) && 
+                   shopCosmetics.get(cosmetic.id).finalPrice < shopCosmetics.get(cosmetic.id).regularPrice,
+          price: shopCosmetics.has(cosmetic.id) ? shopCosmetics.get(cosmetic.id).finalPrice : (item.purchasePrice || 0),
+          regularPrice: shopCosmetics.has(cosmetic.id) ? shopCosmetics.get(cosmetic.id).regularPrice : (item.purchasePrice || 0),
+          isBundle: false,
+          bundleItems: null
+        };
+        
+        selectedCosmetic.value = enrichedCosmetic;
+      } else {
+        // Se não encontrou na API externa, criar objeto básico com os dados do item
+        selectedCosmetic.value = {
+          id: item.cosmeticId || item.id,
+          name: item.name || item.cosmeticId || item.id,
+          type: { value: item.type || '', displayValue: item.type || '' },
+          rarity: { value: item.rarity || 'common', displayValue: item.rarity || 'Common' },
+          images: { smallIcon: item.image || '', icon: item.image || '', featured: item.image || '' },
+          added: item.dateAdded ? new Date(item.dateAdded) : new Date(),
+          isNew: false,
+          isInShop: false,
+          isOwned: true,
+          isOnSale: false,
+          price: item.purchasePrice || 0,
+          regularPrice: item.purchasePrice || 0,
+          isBundle: false,
+          bundleItems: null
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao buscar detalhes do cosmético:', error);
+    // Criar objeto básico em caso de erro
+    selectedCosmetic.value = {
+      id: item.cosmeticId || item.id,
+      name: item.name || item.cosmeticId || item.id,
+      type: { value: item.type || '', displayValue: item.type || '' },
+      rarity: { value: item.rarity || 'common', displayValue: item.rarity || 'Common' },
+      images: { smallIcon: item.image || '', icon: item.image || '', featured: item.image || '' },
+      added: item.dateAdded ? new Date(item.dateAdded) : new Date(),
+      isNew: false,
+      isInShop: false,
+      isOwned: true,
+      isOnSale: false,
+      price: item.purchasePrice || 0,
+      regularPrice: item.purchasePrice || 0,
+      isBundle: false,
+      bundleItems: null
+    };
+  }
+};
+
+const closeCosmeticDetails = () => {
+  selectedCosmetic.value = null;
 };
 
 // Computed para filtrar itens
@@ -420,10 +723,7 @@ const getRarityLabel = (rarity) => {
 };
 
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(value);
+  return new Intl.NumberFormat('pt-BR').format(value) + ' V-Bucks';
 };
 
 const formatDate = (dateString) => {
@@ -659,7 +959,8 @@ const getFundoImage = (rarity) => {
   color: #ff5757;
 }
 
-.transaction-type.type-sale {
+.transaction-type.type-sale,
+.transaction-type.type-refund {
   background: rgba(76, 175, 80, 0.2);
   color: #4caf50;
 }
@@ -924,150 +1225,159 @@ const getFundoImage = (rarity) => {
   font-style: italic;
 }
 
-/* Cards Mini - Versão menor dos cards da loja */
-.items-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 16px;
+/* Tabela de Itens */
+.items-table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  background: #1a1a1a;
+  border: 1px solid #312E81;
+}
+
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.items-table thead {
+  background: #161A42;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.items-table th {
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  color: #00E0FF;
+  text-transform: uppercase;
+  border-bottom: 2px solid #312E81;
+  white-space: nowrap;
+}
+
+.items-table th.col-image {
+  width: 80px;
+  text-align: center;
+}
+
+.items-table th.col-name {
+  min-width: 200px;
+}
+
+.items-table th.col-type {
+  width: 120px;
+}
+
+.items-table th.col-rarity {
+  width: 120px;
+}
+
+.items-table th.col-date {
+  width: 120px;
+}
+
+.items-table th.col-price {
+  width: 150px;
+  text-align: right;
+}
+
+.items-table tbody tr {
+  border-bottom: 1px solid #2a2a2a;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.items-table tbody tr:hover {
+  background-color: #252525;
+}
+
+.items-table td {
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.items-table td.col-image {
+  text-align: center;
   padding: 8px;
 }
 
-.item-card-mini {
-  border-radius: 10px;
-  width: 100%;
-  height: 280px; /* Reduzido de 320px para 280px */
-  padding: 10px; /* Reduzido de 12px para 10px */
-  transition: transform 0.2s;
-  display: flex;
-  flex-direction: column;
-}
-
-.item-card-mini:hover {
-  transform: translateY(-4px);
-}
-
-.rarity-common {
-  background: linear-gradient(180deg, #828282 0%, #B0B0B0 50%, rgba(130, 130, 130, 0.70) 100%);
-}
-
-.rarity-uncommon {
-  background: linear-gradient(180deg, #4CAF50 0%, #81C784 50%, rgba(76, 175, 80, 0.70) 100%);
-}
-
-.rarity-rare {
-  background: linear-gradient(180deg, #137BBE 0%, #12D8FA 50%, rgba(19, 123, 190, 0.70) 100%);
-}
-
-.rarity-epic {
-  background: linear-gradient(180deg, #9C27B0 0%, #BA68C8 50%, rgba(156, 39, 176, 0.70) 100%);
-}
-
-.rarity-legendary {
-  background: linear-gradient(180deg, #FF9800 0%, #FFB74D 50%, rgba(255, 152, 0, 0.70) 100%);
-}
-
-.rarity-mythic {
-  background: linear-gradient(180deg, #E91E63 0%, #F06292 50%, rgba(233, 30, 99, 0.70) 100%);
-}
-
-.card-header-mini {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 4px; /* Reduzido de 6px para 4px */
-}
-
-.date-tag-mini {
-  background-size: cover;
-  width: 75px; /* Reduzido de 80px para 75px */
-  height: 28px; /* Reduzido de 32px para 28px */
-  justify-content: start;
-  align-items: center;
-  display: flex;
-  border-radius: 8px;
-  padding-left: 8px; /* Reduzido de 10px para 8px */
-  font-size: 9px; /* Reduzido de 10px para 9px */
-  color: #fff;
+.items-table td.col-name {
   font-weight: 600;
 }
 
-.rarity-tag-mini {
-  display: flex;
-  border-radius: 10px;
-  border: 1px solid #00458A;
-  background: #00458A;
-  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
-  justify-content: center;
-  align-items: center;
-  width: 70px; /* Reduzido de 75px para 70px */
-  height: 22px; /* Reduzido de 24px para 22px */
-  color: #FFF;
-  text-align: center;
-  font-family: Poppins;
-  font-size: 9px; /* Reduzido de 10px para 9px */
-  font-style: italic;
-  font-weight: 700;
-  line-height: 14px; /* Reduzido de 16px para 14px */
+.items-table td.col-price {
+  text-align: right;
+  color: #00E0FF;
+  font-weight: 600;
 }
 
-.image-container-mini {
-  margin-top: -6px; /* Reduzido de -8px para -6px */
-  width: 100%;
-  height: 160px; /* Reduzido de 180px para 160px */
-  flex-shrink: 0;
-  background: #FFFFFF;
-  border-radius: 10px;
-  position: relative;
-}
-
-.item-image-mini {
-  width: 100%;
-  height: 100%;
+.item-image-table {
+  width: 60px;
+  height: 60px;
   object-fit: cover;
-  border-radius: 10px;
-}
-
-.overlay-tags-mini {
-  position: absolute;
-  bottom: 6px;
-  left: 6px;
-}
-
-.price-badge-mini {
-  width: 60px; /* Reduzido de 65px para 60px */
-  height: 24px; /* Reduzido de 26px para 24px */
-  border-radius: 12px;
+  border-radius: 8px;
+  background: #fff;
   border: 2px solid #312E81;
-  background: linear-gradient(162deg, #161A42 22.61%, #161A42 118.29%);
-  box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.25) inset;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #FAFAFB;
-  font-size: 10px; /* Reduzido de 11px para 10px */
-  font-weight: 600;
-  line-height: 18px; /* Reduzido de 20px para 18px */
 }
 
-.info-section-mini {
-  display: flex;
-  flex-direction: column;
-  gap: 4px; /* Reduzido de 6px para 4px */
-  margin-top: 6px; /* Reduzido de 8px para 6px */
+.item-name-link {
+  color: #fff;
+  text-decoration: none;
+  transition: color 0.2s;
 }
 
-.item-name-mini {
-  display: flex;
-  align-items: center;
-  color: #FAFAFB;
-  font-family: Poppins;
-  font-size: 13px; /* Reduzido de 14px para 13px */
-  font-weight: 600;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+.item-name-link:hover {
+  color: #00E0FF;
+}
+
+.rarity-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+.rarity-badge.rarity-common {
+  background: rgba(130, 130, 130, 0.2);
+  color: #B0B0B0;
+  border-color: #828282;
+}
+
+.rarity-badge.rarity-uncommon {
+  background: rgba(76, 175, 80, 0.2);
+  color: #81C784;
+  border-color: #4CAF50;
+}
+
+.rarity-badge.rarity-rare {
+  background: rgba(19, 123, 190, 0.2);
+  color: #12D8FA;
+  border-color: #137BBE;
+}
+
+.rarity-badge.rarity-epic {
+  background: rgba(156, 39, 176, 0.2);
+  color: #BA68C8;
+  border-color: #9C27B0;
+}
+
+.rarity-badge.rarity-legendary {
+  background: rgba(255, 152, 0, 0.2);
+  color: #FFB74D;
+  border-color: #FF9800;
+}
+
+.rarity-badge.rarity-mythic {
+  background: rgba(233, 30, 99, 0.2);
+  color: #F06292;
+  border-color: #E91E63;
 }
 
 /* Filtros do Modal */
@@ -1094,13 +1404,24 @@ const getFundoImage = (rarity) => {
 .search-input {
   width: 100%;
   padding: 12px 16px 12px 48px;
-  background: #2a2a2a;
+  background: #2a2a2a !important;
   border: 1px solid #3a3a3a;
   border-radius: 8px;
   color: #fff;
   font-size: 14px;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Remover fundo branco do autocomplete */
+.search-input:-webkit-autofill,
+.search-input:-webkit-autofill:hover,
+.search-input:-webkit-autofill:focus,
+.search-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #2a2a2a inset !important;
+  -webkit-text-fill-color: #fff !important;
+  background-color: #2a2a2a !important;
+  background: #2a2a2a !important;
 }
 
 .search-input:focus {
@@ -1112,6 +1433,17 @@ const getFundoImage = (rarity) => {
   color: #666;
 }
 
+.no-users-row {
+  background: transparent;
+}
+
+.no-users-message {
+  text-align: center;
+  padding: 40px 20px;
+  color: #888;
+  font-style: italic;
+}
+
 .filters-row {
   display: flex;
   gap: 12px;
@@ -1120,7 +1452,7 @@ const getFundoImage = (rarity) => {
 .filter-select {
   flex: 1;
   padding: 12px 16px;
-  background: #2a2a2a;
+  background: #2a2a2a !important;
   border: 1px solid #3a3a3a;
   border-radius: 8px;
   color: #fff;
@@ -1128,6 +1460,9 @@ const getFundoImage = (rarity) => {
   outline: none;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .filter-select:focus {
@@ -1136,8 +1471,8 @@ const getFundoImage = (rarity) => {
 }
 
 .filter-select option {
-  background: #1a1a1a;
-  color: #fff;
+  background: #1a1a1a !important;
+  color: #fff !important;
 }
 
 @media (max-width: 768px) {
@@ -1145,17 +1480,18 @@ const getFundoImage = (rarity) => {
     flex-direction: column;
   }
 
-  .items-grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Aumentado de 150px para 180px */
-    gap: 16px;
+  .items-table-wrapper {
+    overflow-x: auto;
   }
 
-  .item-image-container {
-    height: 200px; /* Aumentado de 150px para 200px */
+  .items-table {
+    min-width: 600px;
   }
 
-  .item-info {
-    padding: 16px;
+  .items-table th,
+  .items-table td {
+    padding: 10px 12px;
+    font-size: 12px;
   }
 }
 

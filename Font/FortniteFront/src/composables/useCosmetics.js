@@ -55,7 +55,7 @@ export function useCosmetics() {
   };
   
   // Função para enriquecer cosméticos usando API externa diretamente
-  const enrichCosmeticsFromExternalAPI = async (page, pageSize, sortBy, filters, userId) => {
+  const enrichCosmeticsFromExternalAPI = async (page, pageSize, sortBy, filters, userId, forceRefreshInventory = false) => {
     try {
       // Buscar dados das APIs externas em paralelo (com cache)
       const [cosmeticsResponse, newCosmeticsResponse, shopResponse] = await Promise.all([
@@ -69,18 +69,25 @@ export function useCosmetics() {
         return null;
       }
       
-      // Buscar inventário do usuário do backend (se logado)
-      let ownedCosmeticIds = new Set();
-      if (userId) {
-        try {
-          const inventory = await cosmeticsAPI.getInventory(userId, false);
-          if (inventory && inventory.ownedCosmetics) {
-            ownedCosmeticIds = new Set(inventory.ownedCosmetics.map(c => c.cosmeticId || c.id));
+          // Buscar inventário do usuário do backend (se logado)
+          // Se forceRefreshInventory for true, buscar sempre do servidor (sem cache)
+          let ownedCosmeticIds = new Set();
+          if (userId) {
+            try {
+              // Se forceRefreshInventory for true, buscar sempre do servidor para garantir dados atualizados
+              // Sempre forçar refresh após compra para garantir que o item aparece como possuído
+              const inventory = await cosmeticsAPI.getInventory(userId, forceRefreshInventory || true); // Sempre buscar do servidor
+              if (inventory && inventory.ownedCosmetics) {
+                ownedCosmeticIds = new Set(inventory.ownedCosmetics.map(c => c.cosmeticId || c.id));
+                console.log(`Inventário carregado: ${ownedCosmeticIds.size} itens possuídos (forceRefresh: ${forceRefreshInventory || true})`);
+              }
+            } catch (err) {
+              // Se for 401, apenas não buscar inventário (usuário não autenticado)
+              if (err.response?.status !== 401) {
+                console.warn('Erro ao buscar inventário do usuário:', err);
+              }
+            }
           }
-        } catch (err) {
-          console.warn('Erro ao buscar inventário do usuário:', err);
-        }
-      }
       
       // Processar novos cosméticos
       const newCosmeticIds = new Set();
@@ -397,9 +404,14 @@ export function useCosmetics() {
   };
   
   // Buscar página específica (usado para prefetch)
-  const fetchPage = async (page, useCache = true) => {
+  const fetchPage = async (page, useCache = true, forceRefreshInventory = false) => {
     const cacheKey = getCacheKey(page, pageSize.value, sortBy.value, filters, user.value?.id);
     const storageKey = getStorageKey(page, pageSize.value, sortBy.value, filters, user.value?.id);
+    
+    // Se forceRefreshInventory for true, não usar cache e forçar atualização do inventário
+    if (forceRefreshInventory) {
+      useCache = false;
+    }
     
     // Verificar cache em memória primeiro
     if (useCache && pageCache.has(cacheKey)) {
@@ -438,7 +450,8 @@ export function useCosmetics() {
     
     try {
       // Tentar usar API externa diretamente para melhor performance
-      const enrichedData = await enrichCosmeticsFromExternalAPI(page, pageSize.value, sortBy.value, filters, user.value?.id);
+      // Se forceRefreshInventory for true, forçar atualização do inventário
+      const enrichedData = await enrichCosmeticsFromExternalAPI(page, pageSize.value, sortBy.value, filters, user.value?.id, forceRefreshInventory);
       
       if (enrichedData) {
         // Armazenar no cache em memória
@@ -756,8 +769,9 @@ export function useCosmetics() {
     error.value = null;
     
     try {
-      // Tentar buscar do cache primeiro
-      const cached = await fetchPage(currentPage.value, !forceRefresh);
+      // Tentar buscar do cache primeiro (mas forçar refresh do inventário se necessário)
+      // Se forceRefresh for true, sempre buscar inventário atualizado do servidor
+      const cached = await fetchPage(currentPage.value, !forceRefresh, forceRefresh);
       
       if (cached) {
         cosmetics.value = cached.cosmetics;
@@ -781,7 +795,7 @@ export function useCosmetics() {
     
     // Se não encontrou no cache ou deu erro, fazer requisição normal
     try {
-      const result = await fetchPage(currentPage.value, false);
+      const result = await fetchPage(currentPage.value, false, forceRefresh);
       cosmetics.value = result.cosmetics;
       totalItems.value = result.totalCount;
       
@@ -847,46 +861,139 @@ export function useCosmetics() {
     }
   };
 
-  // Carregar V-Bucks
-  const loadVBucks = async () => {
-    if (!user.value) {
-      vbucks.value = 0;
-      return;
-    }
-    try {
-      const data = await cosmeticsAPI.getVBucks(user.value.id);
-      vbucks.value = data.vbucks || data || 0;
-    } catch (err) {
-      console.error('Error loading V-Bucks:', err);
-      vbucks.value = 0;
-    }
-  };
+      // Carregar V-Bucks
+      const loadVBucks = async () => {
+        if (!user.value) {
+          vbucks.value = 0;
+          return;
+        }
+        try {
+          const data = await cosmeticsAPI.getVBucks(user.value.id);
+          vbucks.value = data.vbucks || data || 0;
+        } catch (err) {
+          // Se for 401, apenas não atualizar (usuário não logado)
+          if (err.response?.status === 401) {
+            console.log('Usuário não autenticado, V-Bucks não disponíveis');
+            vbucks.value = 0;
+            return;
+          }
+          console.error('Error loading V-Bucks:', err);
+          vbucks.value = 0;
+        }
+      };
 
   // Comprar cosmético
   const purchaseCosmetic = async (cosmeticId, price, cosmeticName) => {
-    if (!user.value) {
+    // Verificar se o usuário está logado (tentar carregar do localStorage se necessário)
+    let currentUser = user.value;
+    if (!currentUser) {
+      // Tentar carregar do localStorage
+      try {
+        const storedUser = localStorage.getItem('user');
+        const userId = localStorage.getItem('userId');
+        if (storedUser && userId) {
+          currentUser = JSON.parse(storedUser);
+          // Atualizar o user.value também
+          user.value = currentUser;
+          console.log('Usuário carregado do localStorage:', currentUser);
+        }
+      } catch (e) {
+        console.error('Erro ao carregar usuário do localStorage:', e);
+      }
+    }
+    
+    if (!currentUser || !currentUser.id) {
       error.value = 'É necessário estar logado para comprar cosméticos';
+      console.error('Tentativa de compra sem usuário logado', { currentUser, userValue: user.value });
       return false;
     }
+    
+    const userId = currentUser.id;
+    console.log('Iniciando compra:', { cosmeticId, price, cosmeticName, userId });
+    
     try {
-      await cosmeticsAPI.purchaseCosmetic(cosmeticId, price, cosmeticName, user.value.id);
+      const result = await cosmeticsAPI.purchaseCosmetic(cosmeticId, price, cosmeticName, userId);
       
-      // Limpar cache do inventário e cosméticos do usuário após compra
+      console.log('Resultado da compra:', result);
+      
+      // Verificar se a compra foi bem-sucedida
+      if (!result || !result.success) {
+        error.value = result?.message || 'Erro ao comprar cosmético';
+        console.error('Compra falhou:', result);
+        return false;
+      }
+      
+      // Limpar cache do inventário ANTES de atualizar (importante!)
       try {
-        localStorage.removeItem(`fortnite_inventory_${user.value.id}`);
+        localStorage.removeItem(`fortnite_inventory_${userId}`);
         const { usersService } = await import('../services/users');
-        usersService.clearUserCache(user.value.id);
+        usersService.clearUserCache(userId);
         console.log('Cache do usuário limpo após compra');
       } catch (e) {
         console.warn('Erro ao limpar cache após compra:', e);
       }
       
-      await loadVBucks();
-      await searchCosmetics(true); // Forçar refresh para atualizar status "possui"
+      // Atualizar V-bucks SEMPRE após compra bem-sucedida
+      console.log('Compra bem-sucedida, atualizando V-bucks...');
+      
+      // Primeiro, atualizar com o valor retornado (se disponível)
+      if (result.vbucks !== undefined && result.vbucks !== null) {
+        console.log('Atualizando V-bucks com valor da resposta:', result.vbucks);
+        vbucks.value = result.vbucks;
+        // Atualizar também no useAuth para sincronizar com o header
+        const { useAuth } = await import('./useAuth');
+        const { updateVBucks } = useAuth();
+        updateVBucks(result.vbucks);
+        console.log('V-bucks atualizado no useAuth:', result.vbucks);
+      } else {
+        // Se não retornou, buscar do servidor (forçar refresh)
+        console.log('V-bucks não retornado na resposta, buscando do servidor...');
+        await loadVBucks();
+        const { useAuth } = await import('./useAuth');
+        const { updateVBucks } = useAuth();
+        if (vbucks.value !== undefined && vbucks.value !== null) {
+          updateVBucks(vbucks.value);
+          console.log('V-bucks atualizado do servidor:', vbucks.value);
+        }
+      }
+      
+      // Garantir que o valor foi atualizado
+      console.log('V-bucks final após compra:', vbucks.value);
+      
+      // Limpar cache de cosméticos para forçar recarregamento com inventário atualizado
+      try {
+        // Limpar todas as chaves de cache relacionadas a este usuário
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+          if (key.startsWith(STORAGE_PREFIX) && key.includes(userId.toString())) {
+            localStorage.removeItem(key);
+          }
+        });
+        // Limpar cache em memória também
+        pageCache.clear();
+        prefetchingPages.clear();
+        console.log('Cache de cosméticos limpo para forçar atualização do status "possui"');
+      } catch (e) {
+        console.warn('Erro ao limpar cache de cosméticos:', e);
+      }
+      
+      // Aguardar um pouco para garantir que o backend processou a compra
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Forçar refresh completo dos cosméticos para atualizar status "possui"
+      // Isso vai buscar o inventário atualizado e marcar o item como possuído
+      await searchCosmetics(true);
+      
+      console.log('Compra concluída com sucesso - V-bucks atualizados e status "possui" atualizado');
       return true;
     } catch (err) {
       error.value = err.response?.data?.message || err.message || 'Erro ao comprar cosmético';
       console.error('Error purchasing cosmetic:', err);
+      console.error('Detalhes do erro:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
       return false;
     }
   };

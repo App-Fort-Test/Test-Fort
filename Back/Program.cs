@@ -31,10 +31,43 @@ builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
-              .AllowAnyMethod()
+        var allowedOrigins = new List<string>
+        {
+            "http://localhost:5173",
+            "http://localhost:5175",
+            "http://localhost:5176",
+            "http://localhost:3000",
+            "http://localhost"
+        };
+        
+        // Adicionar origem do Vercel se estiver configurada
+        var vercelUrl = Environment.GetEnvironmentVariable("VERCEL_URL");
+        if (!string.IsNullOrEmpty(vercelUrl))
+        {
+            allowedOrigins.Add($"https://{vercelUrl}");
+        }
+        
+        // Adicionar origem customizada se configurada
+        var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
+        if (!string.IsNullOrEmpty(frontendUrl))
+        {
+            allowedOrigins.Add(frontendUrl);
+        }
+        
+        // Em produção, permitir qualquer origem (ou configurar domínios específicos)
+        if (builder.Environment.IsProduction())
+        {
+            policy.SetIsOriginAllowed(_ => true); // Permite qualquer origem
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins.ToArray());
+        }
+        
+        policy.AllowAnyMethod()
               .AllowAnyHeader()
-              .AllowCredentials();
+              .AllowCredentials()
+              .WithExposedHeaders("X-User-Id"); // Expor o header customizado
     });
 });
 

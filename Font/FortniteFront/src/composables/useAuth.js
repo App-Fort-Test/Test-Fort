@@ -5,7 +5,6 @@ const user = ref(null);
 const isAuthenticated = computed(() => user.value !== null);
 
 export function useAuth() {
-  // Carregar usuário do localStorage ao inicializar
   const loadUserFromStorage = () => {
     const storedUser = localStorage.getItem('user');
     const userId = localStorage.getItem('userId');
@@ -20,7 +19,6 @@ export function useAuth() {
     }
   };
 
-  // Registrar novo usuário
   const register = async (email, password, username) => {
     try {
       const data = await authService.register(email, password, username);
@@ -39,7 +37,6 @@ export function useAuth() {
     }
   };
 
-  // Login
   const login = async (email, password) => {
     try {
       const data = await authService.login(email, password);
@@ -58,22 +55,25 @@ export function useAuth() {
     }
   };
 
-  // Logout
   const logout = () => {
     user.value = null;
     localStorage.removeItem('user');
     localStorage.removeItem('userId');
   };
 
-  // Atualizar v-bucks do usuário
   const updateVBucks = (newVBucks) => {
     if (user.value) {
-      user.value.vbucks = newVBucks;
+      user.value = {
+        ...user.value,
+        vbucks: newVBucks
+      };
       localStorage.setItem('user', JSON.stringify(user.value));
+      console.log('updateVBucks chamado - novo valor:', newVBucks, 'user.value.vbucks:', user.value.vbucks);
+    } else {
+      console.warn('updateVBucks chamado mas user.value é null');
     }
   };
 
-  // Atualizar dados do usuário
   const updateUser = (userData) => {
     if (userData) {
       user.value = { ...user.value, ...userData };
@@ -81,7 +81,6 @@ export function useAuth() {
     }
   };
 
-  // Carregar usuário do storage na inicialização
   loadUserFromStorage();
 
   return {
