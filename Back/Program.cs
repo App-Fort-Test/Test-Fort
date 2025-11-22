@@ -151,32 +151,28 @@ builder.Services.AddCors(options =>
             "http://localhost:5173",
             "http://localhost:5175",
             "http://localhost:5176",
-            "http://localhost:3000"
+            "http://localhost:3000",
+            "https://test-fort-ulwx.vercel.app",
+            "https://test-fort-ulwx-git-main-marcelleaps-projects.vercel.app",
+            "https://test-fort-ulwx-marcelleaps-projects.vercel.app",
+            "https://test-fort-nine.vercel.app"
         };
         
         // Adicionar origem do Vercel se estiver configurada
         var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL");
         if (!string.IsNullOrEmpty(frontendUrl))
         {
-            allowedOrigins.Add(frontendUrl);
+            if (!allowedOrigins.Contains(frontendUrl))
+            {
+                allowedOrigins.Add(frontendUrl);
+            }
         }
         
-        // Em produção, permitir qualquer origem (para facilitar debug)
-        if (builder.Environment.IsProduction())
-        {
-            policy.AllowAnyOrigin()
-                  .AllowAnyMethod()
-                  .AllowAnyHeader()
-                  .WithExposedHeaders("X-User-Id");
-        }
-        else
-        {
-            policy.WithOrigins(allowedOrigins.ToArray())
-                  .AllowAnyMethod()
-                  .AllowAnyHeader()
-                  .AllowCredentials()
-                  .WithExposedHeaders("X-User-Id");
-        }
+        policy.WithOrigins(allowedOrigins.ToArray())
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials()
+              .WithExposedHeaders("X-User-Id");
     });
 });
 
