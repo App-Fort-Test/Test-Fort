@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
+import { useAuth } from './composables/useAuth';
 import CardCompleto from './components/Modal/Cosmetics/CardCompleto.vue';
 import Header from './components/Header/Header.vue';
 import FilterMaster from './components/Filter/FilterMaster.vue';
@@ -9,10 +10,10 @@ import TransactionHistory from './components/Transactions/TransactionHistory.vue
 
 const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
 const activeRoute = ref('loja');
-const lojaKey = ref(0); // Contador para forçar recriação do CardCompleto
+const lojaKey = ref(0);
+const { user, isAuthenticated } = useAuth();
 
 const setActiveRoute = (route) => {
-  // Se estava em outra rota e está voltando para loja, incrementar a key para forçar recriação
   if (activeRoute.value !== 'loja' && route === 'loja') {
     lojaKey.value++;
     console.log('Voltando para a loja - forçando reset dos filtros');
@@ -20,12 +21,26 @@ const setActiveRoute = (route) => {
   activeRoute.value = route;
 };
 
+const handleUserChanged = () => {
+  console.log('Usuário mudou - sincronizando página...');
+  lojaKey.value++;
+  if (activeRoute.value === 'loja') {
+    console.log('Página sincronizada após mudança de usuário');
+  }
+};
+
+watch(isAuthenticated, (newValue, oldValue) => {
+  if (newValue !== oldValue) {
+    console.log(`Estado de autenticação mudou: ${oldValue} -> ${newValue}`);
+    handleUserChanged();
+  }
+});
 
 defineExpose({ setActiveRoute });
 </script>
 
 <template>
-  <Header :active-route="activeRoute" @route-change="setActiveRoute" />
+  <Header :active-route="activeRoute" @route-change="setActiveRoute" @user-changed="handleUserChanged" />
   <Title />
 
   <div v-if="activeRoute === 'loja'" class="main-container">
@@ -59,7 +74,7 @@ defineExpose({ setActiveRoute });
 
 .users-container,
 .history-container {
-  padding: 16px 64px 16px 40px; /* padding-left: 40px (mesmo do Title), padding-right: 64px (mesmo do Header) */
+  padding: 16px 64px 16px 40px;
   width: 100%;
   min-height: calc(100vh - 200px);
   box-sizing: border-box;

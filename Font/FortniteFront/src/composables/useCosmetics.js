@@ -1011,15 +1011,22 @@ export function useCosmetics() {
         // Limpar cache do inventário e cosméticos do usuário após devolução
         try {
           localStorage.removeItem(`fortnite_inventory_${user.value.id}`);
+          // Limpar também caches relacionados a cosméticos
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('fortnite_cosmetics_') || key.startsWith('fortnite_inventory_')) {
+              localStorage.removeItem(key);
+            }
+          });
           const { usersService } = await import('../services/users');
           usersService.clearUserCache(user.value.id);
-          console.log('Cache do usuário limpo após devolução');
+          console.log('Cache do usuário e inventário limpo após devolução');
         } catch (e) {
           console.warn('Erro ao limpar cache após devolução:', e);
         }
         
         await loadVBucks();
-        await searchCosmetics(true); // Forçar refresh para atualizar status "possui"
+        // Forçar refresh completo para atualizar status "possui" e tornar item disponível para compra
+        await searchCosmetics(true);
         return true;
       }
       error.value = result.message || 'Erro ao devolver cosmético';

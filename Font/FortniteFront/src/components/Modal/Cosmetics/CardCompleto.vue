@@ -5,6 +5,7 @@ import PaginationMaster from '../../Pagination/PaginationMaster.vue';
 import CosmeticDetailsModal from './CosmeticDetailsModal.vue';
 import BaseModal from '../User/BaseModal.vue';
 import { useCosmetics } from '../../../composables/useCosmetics';
+import { useAuth } from '../../../composables/useAuth';
 
 const { 
     cosmetics, 
@@ -34,17 +35,13 @@ const refundingId = ref(null);
 const showDetailsModal = ref(false);
 const selectedCosmetic = ref(null);
 
-// Flag para evitar loop infinito entre watch de filtros e tabs
 let isTabChanging = false;
 
 onMounted(async () => {
-    // Sempre resetar filtros e mostrar todos os itens ao montar o componente
     console.log('CardCompleto montado - resetando filtros e mostrando todos os itens');
     
-    // Resetar tab para "todos"
     selectedTab.value = 'todos';
     
-    // Limpar todos os filtros
     filters.name = '';
     filters.type = '';
     filters.rarity = '';
@@ -60,65 +57,52 @@ onMounted(async () => {
     currentPage.value = 1;
     sortBy.value = '';
     
-    // Limpar cache e buscar todos os itens
     clearCache();
     await loadVBucks();
-    await searchCosmetics(true); // Forçar refresh para mostrar todos os itens
+    await searchCosmetics(true);
 });
 
-// Observar mudanças nos filtros (exceto quando mudança vem da tab)
 watch(() => filters, async () => {
-    // Não buscar se a mudança veio da tab
     if (!isTabChanging) {
         currentPage.value = 1;
-        // Limpar cache quando filtros mudarem
         clearCache();
-        // Se filtros foram alterados manualmente, resetar tab para 'todos'
         if (selectedTab.value !== 'todos') {
             selectedTab.value = 'todos';
         } else {
-            await searchCosmetics(true); // Forçar refresh
+            await searchCosmetics(true);
         }
     }
-    // Não resetar isTabChanging aqui, pois ele é controlado pelo watch da tab
 }, { deep: true });
 
-// Observar mudanças na página - IMPORTANTE: sempre buscar novos dados
 watch(() => currentPage.value, async (newPage, oldPage) => {
     if (newPage !== oldPage) {
         console.log(`Mudando de página ${oldPage} para ${newPage}`);
-        // Não forçar refresh, usar cache se disponível
         await searchCosmetics(false);
-        // Pré-carregar próxima página após mudança
         prefetchNextPage();
     }
 }, { immediate: false });
 
-// Observar mudanças no tamanho da página
 watch(() => pageSize.value, async (newSize, oldSize) => {
     if (newSize !== oldSize) {
         currentPage.value = 1;
-        clearCache(); // Limpar cache quando tamanho da página mudar
-        await searchCosmetics(true); // Forçar refresh
+        clearCache();
+        await searchCosmetics(true);
     }
 });
 
-// Observar mudanças na ordenação
 watch(() => sortBy.value, async (newSort, oldSort) => {
     if (newSort !== oldSort) {
         currentPage.value = 1;
-        clearCache(); // Limpar cache quando ordenação mudar
-        await searchCosmetics(true); // Forçar refresh
+        clearCache();
+        await searchCosmetics(true);
     }
 });
 
-// Observar mudanças na tab selecionada
 watch(() => selectedTab.value, async (newTab, oldTab) => {
     if (newTab !== oldTab) {
         isTabChanging = true;
         currentPage.value = 1;
-        clearCache(); // Limpar cache quando tab mudar
-        // Atualizar filtros baseado na tab
+        clearCache();
         if (newTab === 'novos') {
             filters.onlyNew = true;
             filters.onlyInShop = false;
@@ -143,7 +127,6 @@ watch(() => selectedTab.value, async (newTab, oldTab) => {
             filters.onlyOnSale = false;
             filters.onlyOwned = true;
             filters.onlyBundle = false;
-            // Limpar cache do inventário quando filtrar por "possuído" para garantir dados atualizados
             const { useAuth } = await import('../../../composables/useAuth');
             const { user } = useAuth();
             if (user.value?.id) {
@@ -151,21 +134,33 @@ watch(() => selectedTab.value, async (newTab, oldTab) => {
                 console.log('Cache do inventário limpo ao filtrar por "possuído"');
             }
         } else {
-            // Tab "todos" - limpar todos os filtros de tab
             filters.onlyNew = false;
             filters.onlyInShop = false;
             filters.onlyOnSale = false;
             filters.onlyOwned = false;
             filters.onlyBundle = false;
         }
-        // Aguardar um tick para garantir que os filtros foram atualizados
-        await searchCosmetics(true); // Forçar refresh
+        await searchCosmetics(true);
         isTabChanging = false;
     }
 });
 
+const { user, isAuthenticated } = useAuth();
+
+watch(isAuthenticated, (newValue) => {
+    if (!newValue && (selectedTab.value === 'possuido' || filters.onlyOwned)) {
+        console.log('Usuário deslogou - desativando filtro "possuido" e voltando para "todos"');
+        selectedTab.value = 'todos';
+        filters.onlyOwned = false;
+        filters.onlyNew = false;
+        filters.onlyInShop = false;
+        filters.onlyOnSale = false;
+        filters.onlyBundle = false;
+        searchCosmetics(true);
+    }
+});
+
 const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false, bundleItems = null) => {
-    // Se for bundle, usar endpoint específico
     if (isBundle && bundleItems && bundleItems.length > 0) {
         const { useAuth } = await import('../../../composables/useAuth');
         const { user } = useAuth();
@@ -191,7 +186,6 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
             if (result.success) {
                 await searchCosmetics();
                 await loadVBucks();
-                // Atualizar v-bucks no header também
                 const { updateVBucks } = useAuth();
                 if (result.vbucks !== undefined) {
                     updateVBucks(result.vbucks);
@@ -210,13 +204,11 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
         return;
     }
     
-    // Compra normal de item único
     isPurchasing.value = true;
     purchasingId.value = cosmeticId;
     try {
         const success = await purchaseCosmetic(cosmeticId, price, cosmeticName);
         if (success) {
-            // Atualizar estado local imediatamente para feedback visual instantâneo
             const cosmeticIndex = cosmetics.value.findIndex(c => c.id === cosmeticId);
             if (cosmeticIndex !== -1) {
                 cosmetics.value[cosmeticIndex] = {
@@ -227,14 +219,10 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
                 console.log('Estado local atualizado - item marcado como possuído');
             }
             
-            // O purchaseCosmetic já atualiza V-bucks e recarrega cosméticos
-            // Mas vamos garantir que o header também seja atualizado
             console.log('Compra bem-sucedida, atualizando interface...');
             
-            // Aguardar um pouco para garantir que tudo foi atualizado
             await new Promise(resolve => setTimeout(resolve, 300));
             
-            // Atualizar V-bucks no header com o valor atualizado
             await loadVBucks();
             const { useAuth } = await import('../../../composables/useAuth');
             const { updateVBucks } = useAuth();
@@ -243,7 +231,6 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
                 console.log('V-bucks atualizado no header:', vbucks.value);
             }
             
-            // Disparar evento de atualização de transações
             try {
                 const { useTransactions } = await import('../../../composables/useTransactions');
                 const { triggerTransactionUpdate } = useTransactions();
@@ -252,10 +239,8 @@ const handlePurchase = async (cosmeticId, price, cosmeticName, isBundle = false,
                 console.warn('Erro ao disparar evento de atualização:', e);
             }
             
-            // Forçar refresh completo para garantir sincronização com servidor
             await searchCosmetics(true);
             
-            // Mostrar mensagem de sucesso
             alert('Item adquirido com sucesso!');
         } else {
             alert('Erro ao comprar o item. Verifique se você tem V-bucks suficientes.');
@@ -281,18 +266,15 @@ const handleRefund = async (cosmeticId, cosmeticName) => {
         const success = await refundCosmetic(cosmeticId, cosmeticName);
         
         if (success) {
-            // Atualizar estado local imediatamente para feedback visual instantâneo
             const cosmeticIndex = cosmetics.value.findIndex(c => c.id === cosmeticId);
             if (cosmeticIndex !== -1) {
                 cosmetics.value[cosmeticIndex] = {
                     ...cosmetics.value[cosmeticIndex],
                     isOwned: false,
-                    isAdquirir: false
                 };
-                console.log('Estado local atualizado - item removido de possuídos');
+                console.log('Estado local atualizado - item removido de possuídos e disponível para compra');
             }
             
-            // Atualizar v-bucks no header também
             const { useAuth } = await import('../../../composables/useAuth');
             const { updateVBucks } = useAuth();
             await loadVBucks();
@@ -300,7 +282,8 @@ const handleRefund = async (cosmeticId, cosmeticName) => {
                 updateVBucks(vbucks.value);
             }
             
-            // Disparar evento de atualização de transações
+            await searchCosmetics(true);
+            
             try {
                 const { useTransactions } = await import('../../../composables/useTransactions');
                 const { triggerTransactionUpdate } = useTransactions();
@@ -309,7 +292,6 @@ const handleRefund = async (cosmeticId, cosmeticName) => {
                 console.warn('Erro ao disparar evento de atualização:', e);
             }
             
-            // Forçar refresh completo para garantir sincronização com servidor
             await searchCosmetics(true);
             alert('Cosmético devolvido com sucesso!');
         } else {
@@ -327,25 +309,21 @@ const handleRefund = async (cosmeticId, cosmeticName) => {
 const handlePageChange = (page) => {
     console.log(`handlePageChange chamado: página ${page}`);
     currentPage.value = page;
-    // A busca será feita pelo watch acima
 };
 
 const handlePageSizeChange = (size) => {
     console.log(`handlePageSizeChange chamado: tamanho ${size}`);
     pageSize.value = size;
-    // A busca será feita pelo watch acima
 };
 
 const handleSortChange = (sort) => {
     console.log(`handleSortChange chamado: ordenação ${sort}`);
     sortBy.value = sort;
-    // A busca será feita pelo watch acima
 };
 
 const handleTabChange = (tab) => {
     console.log(`handleTabChange chamado: tab ${tab}`);
     selectedTab.value = tab;
-    // A busca será feita pelo watch acima
 };
 
 const handleShowDetails = (cosmetic) => {

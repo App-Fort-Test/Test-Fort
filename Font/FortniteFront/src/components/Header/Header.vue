@@ -98,7 +98,6 @@ const switchToSignup = () => {
 
 const handleLoginSuccess = async () => {
     closeModal();
-    // Atualizar v-bucks após login
     try {
         const { cosmeticsAPI } = await import('../../services/api');
         if (user.value) {
@@ -121,10 +120,10 @@ const handleSignupSuccess = () => {
 
 const handleLogout = () => {
     logout();
+    setActive('loja');
     emit('user-changed');
 };
 
-// Observar mudanças na autenticação
 watch(isAuthenticated, () => {
     emit('user-changed');
 });

@@ -76,28 +76,46 @@ var dbPath = Path.Combine(dbDirectory, "fortnite.db");
 Console.WriteLine($"Diretório do banco: {dbDirectory}");
 Console.WriteLine($"Caminho completo do banco: {dbPath}");
 
-// Verificar e remover arquivos temporários do SQLite que podem estar bloqueando
-try
+// Função para limpar arquivos temporários do SQLite
+static void CleanSqliteTempFiles(string dbPath)
 {
-    var dbShm = dbPath + "-shm";
-    var dbWal = dbPath + "-wal";
+    var tempFiles = new[] { dbPath + "-shm", dbPath + "-wal", dbPath + "-journal" };
     
-    if (File.Exists(dbShm))
+    foreach (var tempFile in tempFiles)
     {
-        File.Delete(dbShm);
-        Console.WriteLine($"Arquivo temporário {dbShm} removido");
-    }
-    
-    if (File.Exists(dbWal))
-    {
-        File.Delete(dbWal);
-        Console.WriteLine($"Arquivo temporário {dbWal} removido");
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            try
+            {
+                if (File.Exists(tempFile))
+                {
+                    // Tentar remover atributo somente leitura se existir
+                    var fileInfo = new FileInfo(tempFile);
+                    if (fileInfo.Exists)
+                    {
+                        fileInfo.IsReadOnly = false;
+                    }
+                    
+                    File.Delete(tempFile);
+                    Console.WriteLine($"Arquivo temporário {tempFile} removido");
+                    break;
+                }
+            }
+            catch (Exception ex) when (attempt < 2)
+            {
+                Console.WriteLine($"Tentativa {attempt + 1} falhou ao remover {tempFile}: {ex.Message}");
+                Thread.Sleep(500); // Aguardar 500ms antes de tentar novamente
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Não foi possível remover {tempFile}: {ex.Message}");
+            }
+        }
     }
 }
-catch (Exception ex)
-{
-    Console.WriteLine($"Aviso ao limpar arquivos temporários: {ex.Message}");
-}
+
+// Limpar arquivos temporários antes de configurar o banco
+CleanSqliteTempFiles(dbPath);
 
 Console.WriteLine($"Banco de dados será criado em: {dbPath}");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -182,14 +200,7 @@ using (var scope = app.Services.CreateScope())
                 Thread.Sleep(retryDelay);
                 
                 // Tentar limpar arquivos temporários novamente
-                try
-                {
-                    var dbShm = dbPath + "-shm";
-                    var dbWal = dbPath + "-wal";
-                    if (File.Exists(dbShm)) File.Delete(dbShm);
-                    if (File.Exists(dbWal)) File.Delete(dbWal);
-                }
-                catch { }
+                CleanSqliteTempFiles(dbPath);
             }
         }
     }

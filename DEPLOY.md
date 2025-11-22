@@ -57,11 +57,14 @@ Após fazer o deploy do backend no Railway e obter a URL, configure no Vercel:
 1. Na seção **"Environment Variables"** (ou **"Add Environment Variable"**)
 2. Adicione:
    - **Key/Name**: `VITE_API_BASE_URL`
-   - **Value**: `https://test-fort-production.up.railway.app/api`
+   - **Value**: `https://helpful-friendship-production-7f08.up.railway.app/api`
      - ⚠️ **IMPORTANTE**: 
        - Deve começar com `https://`
        - Deve terminar com `/api`
        - Formato completo: `https://sua-url-railway.app/api`
+       - ❌ **NÃO use**: apenas o domínio sem `https://` e `/api`
+       - ❌ **NÃO use**: `helpful-friendship-production-7f08.up.railway.app` (sem protocolo e path)
+       - ✅ **Use**: `https://helpful-friendship-production-7f08.up.railway.app/api`
 3. Selecione **"Production"**, **"Preview"** e **"Development"** (ou apenas Production)
 4. Clique em **"Add"** ou **"Save"**
 
@@ -111,14 +114,23 @@ O backend já está configurado. Você só precisa garantir que o CORS aceite a 
    - Clique para limpar o cache
    - Isso força o Railway a usar o Dockerfile atualizado do repositório
 
-8. **Adicione variáveis de ambiente:**
+8. **⚠️ Configure Volume Persistente (IMPORTANTE para SQLite):**
+   - Vá em **Settings** → **Volumes**
+   - Clique em **"Add Volume"**
+   - Configure:
+     - **Mount Path**: `/data`
+   - Isso garante que o banco SQLite não seja perdido entre rebuilds
+   - ⚠️ **Sem volume**: Todos os dados serão perdidos quando o Railway fizer rebuild do container
+
+9. **Adicione variáveis de ambiente:**
    - Vá em **Variables**
    - Adicione:
      - `ASPNETCORE_ENVIRONMENT`: `Production`
      - `ASPNETCORE_URLS`: `http://+:${PORT}` (Railway define PORT automaticamente)
+     - `RAILWAY_VOLUME_MOUNT_PATH`: `/data` (para usar o volume persistente criado acima)
      - `PORT`: Deixe Railway definir automaticamente (não precisa adicionar manualmente)
 
-9. **Agora sim, faça o deploy:**
+10. **Agora sim, faça o deploy:**
    - Clique em **"Deploy"** ou aguarde o deploy automático
    - Aguarde o build completar
 
@@ -201,6 +213,9 @@ builder.Services.AddCors(options =>
 - [ ] Variáveis de ambiente configuradas:
   - [ ] `ASPNETCORE_ENVIRONMENT`: `Production`
   - [ ] `ASPNETCORE_URLS`: `http://+:${PORT}`
+- [ ] ⚠️ **Volume persistente configurado** (para SQLite não perder dados entre rebuilds)
+  - [ ] Volume criado no Railway com Mount Path: `/data`
+  - [ ] Variável `RAILWAY_VOLUME_MOUNT_PATH` configurada: `/data`
 - [ ] Deploy realizado com sucesso
 - [ ] API acessível via URL do Railway
 - [ ] URL do backend copiada (ex: `https://seu-backend.railway.app`)
@@ -219,6 +234,39 @@ builder.Services.AddCors(options =>
 - [ ] CORS configurado no backend para aceitar URL do Vercel
 - [ ] Testes de login/registro funcionando
 - [ ] Testes de compra/devolução funcionando
+
+## ⚠️ IMPORTANTE: Persistência de Dados com SQLite no Railway
+
+**PROBLEMA CRÍTICO**: O backend está usando SQLite, e o arquivo `.db` fica dentro do container. **Os dados NÃO persistem entre rebuilds do Railway**.
+
+### O que acontece:
+- ✅ O banco funciona normalmente durante a execução
+- ❌ **Todos os dados são perdidos** quando o Railway faz rebuild do container
+- ❌ Rebuilds acontecem quando você faz push, atualiza configurações, ou o Railway reinicia o serviço
+
+### Soluções Recomendadas:
+
+#### Opção 1: Usar Volume Persistente do Railway (Recomendado)
+1. No Railway, vá em **Settings** → **Volumes**
+2. Clique em **"Add Volume"**
+3. Configure:
+   - **Mount Path**: `/data` (ou `/app/data`)
+4. Adicione variável de ambiente:
+   - `RAILWAY_VOLUME_MOUNT_PATH`: `/data`
+5. O código já está configurado para usar essa variável automaticamente
+
+#### Opção 2: Migrar para PostgreSQL (Melhor para Produção)
+- O Railway oferece PostgreSQL gratuito
+- Dados persistem permanentemente
+- Melhor performance e escalabilidade
+- Requer mudanças no código (trocar SQLite por PostgreSQL)
+
+#### Opção 3: Usar Serviço de Banco de Dados Externo
+- Usar um serviço como Supabase, PlanetScale, ou Railway PostgreSQL
+- Dados persistem independente do container
+
+### Configuração Atual:
+O código já tenta usar `RAILWAY_VOLUME_MOUNT_PATH` ou `/tmp`, mas `/tmp` também é efêmero. Para persistência real, use um Volume do Railway.
 
 ## 🐛 Troubleshooting
 
@@ -297,16 +345,25 @@ builder.Services.AddCors(options =>
      - Deve usar `.NET 8.0` (não `.NET 6.0`)
      - Deve copiar `Backend.csproj` primeiro, depois fazer `dotnet restore`
 
-### Erro 405 (Method Not Allowed) ao fazer registro/login
-- **Causa**: Problema com roteamento ou ordem do middleware no backend
+### Erro 405 (Method Not Allowed) - URL incorreta no frontend
+- **Causa**: A variável de ambiente `VITE_API_BASE_URL` está configurada incorretamente no Vercel
+- **Sintoma**: A URL da requisição mostra algo como `https://vercel.app/railway.app/auth/register` (URLs concatenadas)
 - **Solução**:
-  1. **Verifique se o código do backend está atualizado** com `UseRouting()` e `UseAuthorization()`
-  2. **Verifique a URL no frontend**: deve ser `https://sua-url-railway.app/api/auth/register`
-  3. **Verifique a variável de ambiente no Vercel**:
-     - Deve ser: `https://sua-url-railway.app/api` (com `/api` no final)
-     - NÃO deve ser: `https://sua-url-railway.app` (sem `/api`)
-  4. **Faça commit e push** das alterações do backend
-  5. **Force um redeploy** no Railway
+  1. **No Vercel, vá em Settings → Environment Variables**
+  2. **Edite ou recrie a variável `VITE_API_BASE_URL`**:
+     - ❌ **ERRADO**: `helpful-friendship-production-7f08.up.railway.app` (sem protocolo e path)
+     - ❌ **ERRADO**: `https://helpful-friendship-production-7f08.up.railway.app` (sem `/api`)
+     - ✅ **CORRETO**: `https://helpful-friendship-production-7f08.up.railway.app/api`
+  3. **Formato correto**:
+     - Deve começar com `https://`
+     - Deve terminar com `/api`
+     - Exemplo: `https://helpful-friendship-production-7f08.up.railway.app/api`
+  4. **Após corrigir, faça redeploy**:
+     - Vá em **Deployments**
+     - Clique nos três pontos do último deploy → **"Redeploy"**
+  5. **Verifique se o backend está funcionando**:
+     - Teste a URL diretamente: `https://helpful-friendship-production-7f08.up.railway.app/api/auth/register`
+     - Deve retornar 405 para GET (normal), mas confirma que a rota existe
 
 ### Erro de CORS
 - Verifique se a URL do frontend está nas origens permitidas do backend
