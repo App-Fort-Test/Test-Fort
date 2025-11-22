@@ -313,6 +313,32 @@ builder.Services.AddCors(options =>
 - Certifique-se de que a variável `FRONTEND_URL` está configurada no Railway
 - Verifique se o código do CORS foi atualizado para usar a variável de ambiente
 
+### Erro Vercel: "Aparentemente, esse erro foi causado pelo aplicativo"
+- **Causa**: O build do frontend falhou ou há um erro em runtime
+- **Solução**:
+  1. **Verifique os logs do deploy no Vercel**:
+     - Vá em **Deployments** → Clique no último deploy
+     - Veja a aba **"Build Logs"** ou **"Function Logs"**
+     - Procure por erros de build ou runtime
+  2. **Verifique se a variável de ambiente está configurada**:
+     - Vá em **Settings** → **Environment Variables**
+     - Certifique-se de que `VITE_API_BASE_URL` está configurada
+     - Formato: `https://sua-url-railway.app/api`
+  3. **Verifique o Root Directory**:
+     - Vá em **Settings** → **General**
+     - Certifique-se de que **Root Directory** está como `Font/FortniteFront`
+  4. **Teste o build localmente**:
+     ```bash
+     cd Font/FortniteFront
+     npm install
+     npm run build
+     ```
+     - Se o build falhar localmente, corrija os erros antes de fazer deploy
+  5. **Verifique se há erros de sintaxe no código**:
+     - Procure por imports faltando
+     - Verifique se todos os arquivos estão corretos
+  6. **Force um novo deploy** após corrigir os problemas
+
 ### Erro Vercel: "404: NOT_FOUND - DEPLOYMENT_NOT_FOUND"
 - **Causa**: O deploy ainda não foi iniciado ou falhou durante a criação do projeto
 - **Solução**:
