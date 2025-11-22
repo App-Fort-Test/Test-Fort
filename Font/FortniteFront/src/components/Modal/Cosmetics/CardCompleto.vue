@@ -393,7 +393,7 @@ const handleCloseDetails = () => {
 
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(223px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 39px; 
     width: 100%;
     justify-items: stretch; 
