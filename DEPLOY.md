@@ -245,6 +245,27 @@ Este erro acontece quando o Railway não encontra o arquivo `Backend.csproj` por
    - O arquivo `Dockerfile` deve estar em `Back/Dockerfile`
    - O arquivo `Program.cs` deve estar em `Back/Program.cs`
 
+### Erro Docker: "/Backend.csproj": not found
+
+Este erro acontece quando o contexto de build do Docker não está na pasta `Back`.
+
+**Solução:**
+
+1. **Verifique o Root Directory:**
+   - No Railway, vá em **Settings** → **Root Directory**
+   - Deve estar configurado como: `Back`
+   - Se não estiver, configure e salve
+
+2. **Reinicie o build:**
+   - Após configurar o Root Directory, o Railway deve fazer um novo build automaticamente
+   - Ou clique em **"Redeploy"** manualmente
+
+3. **Se ainda não funcionar:**
+   - Delete o serviço completamente
+   - Crie um novo serviço
+   - **Configure o Root Directory como `Back` ANTES de fazer qualquer deploy**
+   - Depois selecione o Dockerfile como método de build
+
 ## 🔄 Atualizações
 
 Para atualizar a aplicação após mudanças:

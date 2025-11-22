@@ -12,8 +12,10 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient(); 
 
 // Configurar Entity Framework com SQLite
+// Usar caminho absoluto para evitar problemas de permissão
+var dbPath = Path.Combine(Directory.GetCurrentDirectory(), "fortnite.db");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite("Data Source=fortnite.db"));
+    options.UseSqlite($"Data Source={dbPath}"));
 
 builder.Services.AddHttpClient("FortniteApi", client =>
 {
