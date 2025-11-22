@@ -50,7 +50,7 @@ cd Font/FortniteFront
 # Fazer login
 vercel login
 
-# Deploy
+# Deploy (o Vercel detectará automaticamente o vercel.json)
 vercel
 
 # Adicionar variável de ambiente
@@ -63,7 +63,7 @@ vercel env add VITE_API_BASE_URL
 Após o deploy do backend, atualize a variável de ambiente `VITE_API_BASE_URL` no Vercel:
 1. Vá em **Settings** → **Environment Variables**
 2. Edite `VITE_API_BASE_URL` com a URL do backend
-3. Faça um novo deploy
+3. Faça um novo deploy (ou aguarde o redeploy automático)
 
 ## 🔧 Deploy do Backend
 
@@ -71,9 +71,10 @@ Após o deploy do backend, atualize a variável de ambiente `VITE_API_BASE_URL` 
 
 1. **Acesse [Railway](https://railway.app)** e faça login com GitHub
 2. **Clique em "New Project"** → **"Deploy from GitHub repo"**
-3. **Selecione o repositório** e a branch
+3. **Selecione o repositório** e a branch (o mesmo repositório do frontend)
 4. **Configure o serviço:**
-   - **Root Directory**: `Back`
+   - ⚠️ **IMPORTANTE**: Após selecionar o repositório, clique em "Settings"
+   - **Root Directory**: `Back` ← Configure isso!
    - Railway detectará automaticamente que é um projeto .NET
    - O arquivo `railway.json` já está configurado
 
@@ -148,8 +149,8 @@ O backend já está configurado para aceitar qualquer origem em produção autom
 ## 📝 Checklist de Deploy
 
 ### Frontend (Vercel)
-- [ ] Repositório conectado ao Vercel
-- [ ] Root Directory configurado: `Font/FortniteFront`
+- [ ] Repositório conectado ao Vercel (mesmo repositório do backend)
+- [ ] ⚠️ **Root Directory configurado**: `Font/FortniteFront` (muito importante!)
 - [ ] Variável `VITE_API_BASE_URL` configurada com URL do backend
 - [ ] Deploy realizado com sucesso
 - [ ] Aplicação acessível via URL do Vercel
@@ -189,6 +190,12 @@ O backend já está configurado para aceitar qualquer origem em produção autom
 - No Railway: Variables → Redeploy
 - No Render: Environment → Save Changes → Manual Deploy
 
+### Erro: "Cannot find project file"
+- ⚠️ **Verifique o Root Directory!** Deve ser `Back` para backend e `Font/FortniteFront` para frontend
+- No Vercel: Settings → General → Root Directory
+- No Railway: Settings → Root Directory
+- No Render: Settings → Root Directory
+
 ## 🔄 Atualizações
 
 Para atualizar a aplicação após mudanças:
@@ -204,3 +211,8 @@ Para atualizar a aplicação após mudanças:
 - [Documentação Render](https://render.com/docs)
 - [Documentação Fly.io](https://fly.io/docs)
 
+## 💡 Dica Final
+
+**Use o mesmo repositório!** É mais simples e prático. Apenas certifique-se de configurar o **Root Directory** corretamente em cada serviço:
+- Vercel: `Font/FortniteFront`
+- Railway/Render: `Back`
