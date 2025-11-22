@@ -72,17 +72,37 @@ Após o deploy do backend, atualize a variável de ambiente `VITE_API_BASE_URL` 
 1. **Acesse [Railway](https://railway.app)** e faça login com GitHub
 2. **Clique em "New Project"** → **"Deploy from GitHub repo"**
 3. **Selecione o repositório** e a branch (o mesmo repositório do frontend)
-4. **Configure o serviço:**
-   - ⚠️ **IMPORTANTE**: Após selecionar o repositório, clique em "Settings"
-   - **Root Directory**: `Back` ← Configure isso!
-   - Railway detectará automaticamente que é um projeto .NET
-   - O arquivo `railway.json` já está configurado
+4. **⚠️ CONFIGURE O ROOT DIRECTORY ANTES DE QUALQUER COISA:**
+   - Após selecionar o repositório, **NÃO clique em Deploy ainda**
+   - Clique em **"Settings"** (ou "Configure")
+   - Procure por **"Root Directory"** ou **"Working Directory"**
+   - Digite: `Back` ← **MUITO IMPORTANTE!**
+   - Salve as configurações
 
-5. **Adicione variáveis de ambiente (opcional):**
-   - `ASPNETCORE_ENVIRONMENT`: `Production`
-   - `ASPNETCORE_URLS`: `http://+:${PORT}` (Railway define PORT automaticamente)
+5. **Escolha o método de build:**
 
-6. **Aguarde o deploy** e copie a URL gerada (ex: `https://seu-projeto.railway.app`)
+   **Opção A: Usar Dockerfile (Recomendado - mais confiável)**
+   - Vá em **Settings** → **Service Source**
+   - Selecione **"Dockerfile"**
+   - O Railway usará o `Dockerfile` que está na pasta `Back`
+   
+   **Opção B: Usar Nixpacks (detecção automática)**
+   - Vá em **Settings** → **Service Source**
+   - Selecione **"Nixpacks"**
+   - O Railway deve detectar automaticamente o projeto .NET
+   - Se não detectar, use a Opção A (Dockerfile)
+
+6. **Adicione variáveis de ambiente:**
+   - Vá em **Variables**
+   - Adicione:
+     - `ASPNETCORE_ENVIRONMENT`: `Production`
+     - `ASPNETCORE_URLS`: `http://+:${PORT}` (Railway define PORT automaticamente)
+     - `PORT`: Deixe Railway definir automaticamente (não precisa adicionar manualmente)
+
+7. **Agora sim, faça o deploy:**
+   - Clique em **"Deploy"** ou aguarde o deploy automático
+   - Aguarde o build completar
+   - Copie a URL gerada (ex: `https://seu-projeto.railway.app`)
 
 ### Opção 2: Render
 
@@ -195,6 +215,32 @@ O backend já está configurado para aceitar qualquer origem em produção autom
 - No Vercel: Settings → General → Root Directory
 - No Railway: Settings → Root Directory
 - No Render: Settings → Root Directory
+
+### Erro Railway: "Railpack could not determine how to build the app"
+
+Este erro acontece quando o Railway não encontra o arquivo `Backend.csproj` porque está analisando a raiz do repositório.
+
+**Solução (PASSO A PASSO):**
+
+1. **Configure o Root Directory PRIMEIRO:**
+   - No Railway, vá em **Settings** → **Root Directory**
+   - Digite: `Back`
+   - Salve
+
+2. **Escolha o método de build:**
+   - Vá em **Settings** → **Service Source**
+   - Selecione **"Dockerfile"** (mais confiável)
+   - Ou selecione **"Nixpacks"** se preferir detecção automática
+
+3. **Se ainda não funcionar:**
+   - Delete o serviço e crie novamente
+   - Desta vez, configure o Root Directory **ANTES** de fazer o primeiro deploy
+   - Use o Dockerfile como método de build
+
+4. **Verifique se os arquivos estão corretos:**
+   - O arquivo `Backend.csproj` deve estar em `Back/Backend.csproj`
+   - O arquivo `Dockerfile` deve estar em `Back/Dockerfile`
+   - O arquivo `Program.cs` deve estar em `Back/Program.cs`
 
 ## 🔄 Atualizações
 

@@ -19,8 +19,11 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 
-# Expose port
-EXPOSE 5155
+# Expose port (Railway usa variável PORT)
+EXPOSE ${PORT:-5155}
+
+# Usar variável PORT do Railway se disponível
+ENV ASPNETCORE_URLS=http://+:${PORT:-5155}
 
 ENTRYPOINT ["dotnet", "Backend.dll"]
 
