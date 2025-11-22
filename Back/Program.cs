@@ -46,16 +46,25 @@ static bool IsDirectoryWritable(string dirPath)
 var dbDirectory = Environment.GetEnvironmentVariable("RAILWAY_VOLUME_MOUNT_PATH");
 if (string.IsNullOrEmpty(dbDirectory))
 {
-    // Tentar usar /tmp no Railway ou diretório atual
+    Console.WriteLine("⚠️ AVISO: RAILWAY_VOLUME_MOUNT_PATH não está configurado!");
+    Console.WriteLine("⚠️ O banco será criado em /tmp (dados serão perdidos entre rebuilds)");
+    Console.WriteLine("💡 Configure um volume persistente no Railway e a variável RAILWAY_VOLUME_MOUNT_PATH=/data");
+    
     var tmpDir = "/tmp";
     if (Directory.Exists(tmpDir) && IsDirectoryWritable(tmpDir))
     {
         dbDirectory = tmpDir;
+        Console.WriteLine($"⚠️ Usando diretório temporário: {tmpDir}");
     }
     else
     {
         dbDirectory = Directory.GetCurrentDirectory();
+        Console.WriteLine($"⚠️ Usando diretório atual: {dbDirectory}");
     }
+}
+else
+{
+    Console.WriteLine($"✅ RAILWAY_VOLUME_MOUNT_PATH configurado: {dbDirectory}");
 }
 
 // Garantir que o diretório existe e tem permissões
@@ -270,6 +279,55 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors();
+
+app.Use(async (context, next) =>
+{
+    try
+    {
+        if (!File.Exists(dbPath))
+        {
+            Console.WriteLine($"⚠️ Banco não existe, tentando criar antes da requisição: {dbPath}");
+            try
+            {
+                using (var scope = app.Services.CreateScope())
+                {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    dbContext.Database.EnsureCreated();
+                    Console.WriteLine($"✅ Banco criado com sucesso antes da requisição");
+                }
+            }
+            catch (Exception createEx)
+            {
+                Console.WriteLine($"❌ Falha ao criar banco antes da requisição: {createEx.Message}");
+            }
+        }
+        
+        await next();
+    }
+    catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.Message.Contains("no such table") || ex.Message.Contains("unable to open database"))
+    {
+        Console.WriteLine($"⚠️ Erro de banco detectado na requisição: {ex.Message}");
+        Console.WriteLine($"   Tentando criar banco de dados...");
+        
+        try
+        {
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                dbContext.Database.EnsureCreated();
+                Console.WriteLine($"✅ Banco criado com sucesso após erro na requisição");
+            }
+            
+            await next();
+        }
+        catch (Exception createEx)
+        {
+            Console.WriteLine($"❌ Falha ao criar banco após erro: {createEx.Message}");
+            context.Response.StatusCode = 500;
+            await context.Response.WriteAsync("{\"message\":\"Erro ao acessar banco de dados. Tente novamente em alguns instantes.\"}");
+        }
+    }
+});
 
 app.UseAuthorization();
 

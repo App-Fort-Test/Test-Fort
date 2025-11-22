@@ -420,16 +420,42 @@ O código já tenta usar `RAILWAY_VOLUME_MOUNT_PATH` ou `/tmp`, mas `/tmp` tamb�
   - Se precisar corrigir: desative e reative o Private Networking nas configurações
   - Ou simplesmente ignore - o serviço público (HTTP) continuará funcionando normalmente
 
+### Erro: Não consegue fazer login - banco de dados não conecta
+- **Causa**: Banco SQLite não está sendo criado ou não tem permissão de escrita
+- **Sintomas**: Erro ao fazer login, mensagens de "unable to open database" ou "no such table"
+- **Solução URGENTE**:
+  1. **Configure Volume Persistente** (CRÍTICO):
+     - Vá em **Settings → Volumes**
+     - Clique em **"Add Volume"**
+     - Configure **Mount Path**: `/data`
+  2. **Configure Variável de Ambiente**:
+     - Vá em **Settings → Variables**
+     - Adicione: `RAILWAY_VOLUME_MOUNT_PATH` = `/data`
+  3. **Verifique os Logs do Railway**:
+     - Vá em **Deployments** → Clique no último deploy → **Logs**
+     - Procure por: `=== Iniciando criação do banco de dados ===`
+     - Verifique se aparece: `✅ Banco de dados criado/verificado com sucesso!`
+     - Se aparecer erro, copie a mensagem completa
+  4. **Faça Redeploy** após configurar volume e variável
+  5. **O código agora**:
+     - Tenta criar o banco na inicialização (5 tentativas com logs detalhados)
+     - Verifica se o banco existe antes de cada requisição
+     - Tenta criar o banco automaticamente se não existir
+  6. **Se ainda não funcionar**:
+     - Verifique se o volume está montado corretamente
+     - Verifique permissões nos logs
+     - Consulte `FIX_DATABASE.md` para diagnóstico detalhado
+
 ### Erro de conexão com banco de dados no Railway
 - **Causa**: SQLite pode ter problemas de permissão ou o diretório pode ser efêmero no Railway
 - **Solução**:
   1. **Verifique os logs do Railway** para ver a mensagem de erro específica
   2. **O código já está configurado** para usar `/tmp` ou diretório persistente se disponível
-  3. **No Railway, considere usar um volume persistente**:
+  3. **No Railway, use um volume persistente** (veja seção acima):
      - Vá em **Settings → Volumes**
-     - Crie um volume persistente
-     - Configure a variável de ambiente `RAILWAY_VOLUME_MOUNT_PATH` com o caminho do volume
-  4. **Alternativa**: O banco será criado automaticamente na primeira requisição se houver permissão
+     - Crie um volume persistente com Mount Path: `/data`
+     - Configure a variável de ambiente `RAILWAY_VOLUME_MOUNT_PATH`: `/data`
+  4. **O banco será criado automaticamente** na primeira requisição se houver permissão
   5. **Verifique os logs** para ver onde o banco está sendo criado
 
 ### Backend não inicia no Railway
