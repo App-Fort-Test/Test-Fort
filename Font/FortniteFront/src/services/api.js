@@ -1,7 +1,35 @@
 import axios from 'axios';
 
+// Função para normalizar a URL da API
+const normalizeApiUrl = (url) => {
+  if (!url) return 'http://localhost:5155/api/ControllerCosmeticsEnriched';
+  
+  // Se não começar com http:// ou https://, adicionar https://
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = 'https://' + url;
+  }
+  
+  // Garantir que termina com /ControllerCosmeticsEnriched
+  if (!url.endsWith('/ControllerCosmeticsEnriched')) {
+    // Se terminar com /api, substituir por /api/ControllerCosmeticsEnriched
+    if (url.endsWith('/api')) {
+      url = url + '/ControllerCosmeticsEnriched';
+    } else if (url.endsWith('/api/')) {
+      url = url + 'ControllerCosmeticsEnriched';
+    } else {
+      // Se não terminar com /, adicionar
+      url = url.replace(/\/$/, '');
+      url = url + '/api/ControllerCosmeticsEnriched';
+    }
+  }
+  
+  return url;
+};
+
 // Usar variável de ambiente se disponível, senão usar localhost
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5155/api/ControllerCosmeticsEnriched';
+const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_BASE_URL) || 'http://localhost:5155/api/ControllerCosmeticsEnriched';
+
+console.log('API_BASE_URL configurada:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -353,7 +381,19 @@ export const cosmeticsAPI = {
   // Devolver cosmético
   refundCosmetic: async (cosmeticId, cosmeticName, userId) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/ControllerCosmeticsEnriched', '') || 'http://localhost:5155/api';
+      const normalizeUrl = (url) => {
+        if (!url) return 'http://localhost:5155/api';
+        url = url.replace('/ControllerCosmeticsEnriched', '');
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url;
+        }
+        if (!url.endsWith('/api')) {
+          url = url.replace(/\/$/, '');
+          url = url + '/api';
+        }
+        return url;
+      };
+      const baseUrl = normalizeUrl(import.meta.env.VITE_API_BASE_URL) || 'http://localhost:5155/api';
       const response = await axios.post(`${baseUrl}/transactions/refund/${cosmeticId}`, {
         cosmeticName: cosmeticName || cosmeticId
       }, {
@@ -369,7 +409,19 @@ export const cosmeticsAPI = {
   // Comprar bundle
   purchaseBundle: async (cosmetics, userId) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_BASE_URL?.replace('/ControllerCosmeticsEnriched', '') || 'http://localhost:5155/api';
+      const normalizeUrl = (url) => {
+        if (!url) return 'http://localhost:5155/api';
+        url = url.replace('/ControllerCosmeticsEnriched', '');
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = 'https://' + url;
+        }
+        if (!url.endsWith('/api')) {
+          url = url.replace(/\/$/, '');
+          url = url + '/api';
+        }
+        return url;
+      };
+      const baseUrl = normalizeUrl(import.meta.env.VITE_API_BASE_URL) || 'http://localhost:5155/api';
       const response = await axios.post(`${baseUrl}/bundles/purchase`, {
         cosmetics: cosmetics
       }, {

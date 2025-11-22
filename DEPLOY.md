@@ -65,6 +65,7 @@ Após fazer o deploy do backend no Railway e obter a URL, configure no Vercel:
        - ❌ **NÃO use**: apenas o domínio sem `https://` e `/api`
        - ❌ **NÃO use**: `helpful-friendship-production-7f08.up.railway.app` (sem protocolo e path)
        - ✅ **Use**: `https://helpful-friendship-production-7f08.up.railway.app/api`
+     - 💡 **Nota**: O código agora normaliza automaticamente a URL, mas é melhor configurar corretamente
 3. Selecione **"Production"**, **"Preview"** e **"Development"** (ou apenas Production)
 4. Clique em **"Add"** ou **"Save"**
 
