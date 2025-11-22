@@ -260,16 +260,30 @@ const canPurchase = computed(() => {
 
 const handlePurchase = async () => {
   if (!user.value) {
-    alert('É necessário estar logado para comprar cosméticos');
+    toast.warning('É necessário estar logado para comprar cosméticos');
     return;
   }
 
   if (!props.cosmetic) return;
 
   isPurchasing.value = true;
+  
+  // Atualização otimista da wallet
+  const currentVBucks = user.value.vbucks || 0;
+  const previousVBucks = currentVBucks;
+  let totalPrice = 0;
+  
   try {
     let success = false;
     if (props.cosmetic.isBundle && props.cosmetic.bundleItems && props.cosmetic.bundleItems.length > 0) {
+      // Calcular preço total do bundle
+      totalPrice = props.cosmetic.bundleItems.reduce((sum, item) => sum + (item.price || 0), 0);
+      
+      // SEMPRE subtrair o preço total (mesmo que não tenha saldo suficiente, o servidor vai validar)
+      const newVBucks = Math.max(0, currentVBucks - totalPrice);
+      updateVBucks(newVBucks);
+      console.log(`[COMPRA BUNDLE MODAL] Atualização otimista: ${currentVBucks} - ${totalPrice} = ${newVBucks}`);
+      
       const cosmeticsToPurchase = props.cosmetic.bundleItems.map(item => ({
         cosmeticId: item.id,
         cosmeticName: item.name || item.id,
@@ -278,22 +292,39 @@ const handlePurchase = async () => {
       const { cosmeticsAPI } = await import('../../../services/api');
       const result = await cosmeticsAPI.purchaseBundle(cosmeticsToPurchase, user.value.id);
       success = result.success;
+      
       if (success && result.vbucks !== undefined) {
         updateVBucks(result.vbucks);
+      } else if (!success) {
+        // Reverter atualização otimista em caso de erro
+        updateVBucks(previousVBucks);
       }
     } else {
+      totalPrice = props.cosmetic.price || 0;
+      
+      // SEMPRE subtrair o preço (mesmo que não tenha saldo suficiente, o servidor vai validar)
+      const newVBucks = Math.max(0, currentVBucks - totalPrice);
+      updateVBucks(newVBucks);
+      console.log(`[COMPRA MODAL] Atualização otimista: ${currentVBucks} - ${totalPrice} = ${newVBucks}`);
+      
       success = await purchaseCosmetic(props.cosmetic.id, props.cosmetic.price, props.cosmetic.name);
+      
+      if (!success) {
+        // Reverter atualização otimista em caso de erro
+        updateVBucks(previousVBucks);
+      }
     }
     
     if (success) {
-      await loadVBucks();
-      await searchCosmetics();
+      // O purchaseCosmetic já chama searchCosmetics internamente, não precisa chamar novamente
       toast.success('Cosmético adquirido com sucesso!');
       emit('purchase-success');
     } else {
       toast.error(cosmeticError.value || 'Erro ao comprar cosmético');
     }
   } catch (err) {
+    // Reverter atualização otimista em caso de erro
+    updateVBucks(previousVBucks);
     console.error('Erro ao comprar cosmético:', err);
     toast.error(err.response?.data?.message || 'Erro ao comprar cosmético');
   } finally {
@@ -323,28 +354,51 @@ const confirmRefund = async () => {
   if (!props.cosmetic) return;
   
   isRefunding.value = true;
+  
+  // Atualização otimista: usar o preço atual como estimativa
+  const refundPrice = props.cosmetic.price || props.cosmetic.regularPrice || 0;
+  const currentVBucks = user.value?.vbucks || 0;
+  const previousVBucks = currentVBucks;
+  
+  // Atualização otimista: ADICIONAR preço à wallet imediatamente
+  const newVBucks = currentVBucks + refundPrice;
+  updateVBucks(newVBucks);
+  console.log(`[DEVOLUÇÃO MODAL] Atualização otimista: ${currentVBucks} + ${refundPrice} = ${newVBucks}`);
+  
   try {
-    const success = await refundCosmetic(props.cosmetic.id, props.cosmetic.name);
-    if (success) {
-      await loadVBucks();
-      const { cosmeticsAPI } = await import('../../../services/api');
-      try {
-        if (user.value) {
-          const data = await cosmeticsAPI.getVBucks(user.value.id);
-          if (data.vbucks !== undefined) {
-            updateVBucks(data.vbucks);
-          }
-        }
-      } catch (e) {
-        console.warn('Erro ao atualizar wallet no modal:', e);
+    const result = await refundCosmetic(props.cosmetic.id, props.cosmetic.name);
+    if (result.success) {
+      // Atualizar o cosmético no modal imediatamente
+      if (props.cosmetic) {
+        props.cosmetic.isOwned = false;
+        console.log(`[DEVOLUÇÃO MODAL] Cosmético ${props.cosmetic.id} atualizado: isOwned = false`);
       }
-      await searchCosmetics();
+      
+      // Atualizar wallet com o valor retornado do servidor (mais preciso)
+      if (result.vbucks !== undefined && result.vbucks !== null) {
+        updateVBucks(result.vbucks);
+      }
+      
+      // Disparar evento de atualização de transações
+      try {
+        const { useTransactions } = await import('../../../composables/useTransactions');
+        const { triggerTransactionUpdate } = useTransactions();
+        triggerTransactionUpdate();
+      } catch (e) {
+        console.warn('Erro ao disparar evento de atualização:', e);
+      }
+      
+      // O refundCosmetic já chama searchCosmetics internamente, não precisa chamar novamente
       toast.success('Cosmético devolvido com sucesso!');
       emit('refund-success');
     } else {
+      // Reverter atualização otimista em caso de erro
+      updateVBucks(previousVBucks);
       toast.error(cosmeticError.value || 'Erro ao devolver cosmético');
     }
   } catch (err) {
+    // Reverter atualização otimista em caso de erro
+    updateVBucks(previousVBucks);
     console.error('Erro ao devolver cosmético:', err);
     toast.error(err.response?.data?.message || 'Erro ao devolver cosmético');
   } finally {

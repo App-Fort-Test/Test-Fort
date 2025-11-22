@@ -884,6 +884,7 @@ export function useCosmetics() {
 
   // Comprar cosmético
   const purchaseCosmetic = async (cosmeticId, price, cosmeticName) => {
+    // Retornar objeto com success e vbucks para permitir sincronização
     // Verificar se o usuário está logado (tentar carregar do localStorage se necessário)
     let currentUser = user.value;
     if (!currentUser) {
@@ -905,7 +906,7 @@ export function useCosmetics() {
     if (!currentUser || !currentUser.id) {
       error.value = 'É necessário estar logado para comprar cosméticos';
       console.error('Tentativa de compra sem usuário logado', { currentUser, userValue: user.value });
-      return false;
+      return { success: false, vbucks: null };
     }
     
     const userId = currentUser.id;
@@ -920,7 +921,7 @@ export function useCosmetics() {
       if (!result || !result.success) {
         error.value = result?.message || 'Erro ao comprar cosmético';
         console.error('Compra falhou:', result);
-        return false;
+        return { success: false, vbucks: null };
       }
       
       // Limpar cache do inventário ANTES de atualizar (importante!)
@@ -980,12 +981,24 @@ export function useCosmetics() {
       // Aguardar um pouco para garantir que o backend processou a compra
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      // Forçar refresh completo dos cosméticos para atualizar status "possui"
+      // Atualizar o card específico imediatamente
+      const cosmeticIndex = cosmetics.value.findIndex(c => c.id === cosmeticId);
+      if (cosmeticIndex !== -1) {
+        cosmetics.value[cosmeticIndex] = {
+          ...cosmetics.value[cosmeticIndex],
+          isOwned: true
+        };
+        console.log(`Card ${cosmeticId} atualizado imediatamente: isOwned = true`);
+      }
+      
+      // Forçar refresh completo dos cosméticos para atualizar status "possui" de todos
       // Isso vai buscar o inventário atualizado e marcar o item como possuído
       await searchCosmetics(true);
       
       console.log('Compra concluída com sucesso - V-bucks atualizados e status "possui" atualizado');
-      return true;
+      // Retornar o valor final de vbucks
+      const finalVBucks = result.vbucks || vbucks.value || null;
+      return { success: true, vbucks: finalVBucks };
     } catch (err) {
       error.value = err.response?.data?.message || err.message || 'Erro ao comprar cosmético';
       console.error('Error purchasing cosmetic:', err);
@@ -994,7 +1007,7 @@ export function useCosmetics() {
         response: err.response?.data,
         status: err.response?.status
       });
-      return false;
+      return { success: false, vbucks: null };
     }
   };
 
@@ -1002,7 +1015,7 @@ export function useCosmetics() {
   const refundCosmetic = async (cosmeticId, cosmeticName) => {
     if (!user.value) {
       error.value = 'É necessário estar logado para devolver cosméticos';
-      return false;
+      return { success: false, vbucks: null };
     }
     try {
       const { transactionsService } = await import('../services/transactions');
@@ -1024,17 +1037,46 @@ export function useCosmetics() {
           console.warn('Erro ao limpar cache após devolução:', e);
         }
         
-        await loadVBucks();
-        // Forçar refresh completo para atualizar status "possui" e tornar item disponível para compra
-        await searchCosmetics(true);
-        return true;
+        // Atualizar V-bucks com o valor retornado do servidor
+        if (result.vbucks !== undefined && result.vbucks !== null) {
+          console.log('Atualizando V-bucks com valor da resposta de devolução:', result.vbucks);
+          vbucks.value = result.vbucks;
+          // Atualizar também no useAuth para sincronizar com o header
+          const { useAuth } = await import('./useAuth');
+          const { updateVBucks } = useAuth();
+          updateVBucks(result.vbucks);
+          console.log('V-bucks atualizado no useAuth após devolução:', result.vbucks);
+        } else {
+          // Se não retornou, buscar do servidor
+          await loadVBucks();
+          const { useAuth } = await import('./useAuth');
+          const { updateVBucks } = useAuth();
+          if (vbucks.value !== undefined && vbucks.value !== null) {
+            updateVBucks(vbucks.value);
+            console.log('V-bucks atualizado do servidor após devolução:', vbucks.value);
+          }
+        }
+        
+         // Atualizar o card específico imediatamente
+         const cosmeticIndex = cosmetics.value.findIndex(c => c.id === cosmeticId);
+         if (cosmeticIndex !== -1) {
+           cosmetics.value[cosmeticIndex] = {
+             ...cosmetics.value[cosmeticIndex],
+             isOwned: false
+           };
+           console.log(`Card ${cosmeticId} atualizado imediatamente: isOwned = false`);
+         }
+         
+         // Forçar refresh completo para atualizar status "possui" e tornar item disponível para compra
+         await searchCosmetics(true);
+         return { success: true, vbucks: result.vbucks || vbucks.value };
       }
       error.value = result.message || 'Erro ao devolver cosmético';
-      return false;
+      return { success: false, vbucks: null };
     } catch (err) {
       error.value = err.response?.data?.message || err.message || 'Erro ao devolver cosmético';
       console.error('Error refunding cosmetic:', err);
-      return false;
+      return { success: false, vbucks: null };
     }
   };
 
