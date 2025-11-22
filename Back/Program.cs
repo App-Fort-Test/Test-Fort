@@ -173,6 +173,12 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowCredentials()
               .WithExposedHeaders("X-User-Id");
+        
+        Console.WriteLine($"✅ CORS configurado com {allowedOrigins.Count} origens permitidas:");
+        foreach (var origin in allowedOrigins)
+        {
+            Console.WriteLine($"   - {origin}");
+        }
     });
 });
 
@@ -275,6 +281,16 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors();
+
+app.Use(async (context, next) =>
+{
+    var origin = context.Request.Headers["Origin"].ToString();
+    if (!string.IsNullOrEmpty(origin))
+    {
+        Console.WriteLine($"🌐 Requisição de origem: {origin}, Método: {context.Request.Method}");
+    }
+    await next();
+});
 
 app.Use(async (context, next) =>
 {
