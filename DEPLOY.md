@@ -84,11 +84,14 @@ Após o deploy do backend, atualize a variável de ambiente `VITE_API_BASE_URL` 
    **Opção A: Usar Dockerfile (Recomendado - mais confiável)**
    - Vá em **Settings** → **Service Source**
    - Selecione **"Dockerfile"**
+   - ⚠️ **IMPORTANTE**: Certifique-se de que o **Root Directory** está configurado como `Back`
    - O Railway usará o `Dockerfile` que está na pasta `Back`
+   - O contexto de build será a pasta `Back`, então o Dockerfile encontrará o `Backend.csproj`
    
    **Opção B: Usar Nixpacks (detecção automática)**
    - Vá em **Settings** → **Service Source**
    - Selecione **"Nixpacks"**
+   - ⚠️ **IMPORTANTE**: Certifique-se de que o **Root Directory** está configurado como `Back`
    - O Railway deve detectar automaticamente o projeto .NET
    - Se não detectar, use a Opção A (Dockerfile)
 

@@ -2,8 +2,8 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copy project file and restore dependencies
-COPY Backend.csproj .
+
+COPY Backend.csproj* ./
 RUN dotnet restore
 
 # Copy everything else and build
